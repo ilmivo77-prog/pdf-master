@@ -4,6 +4,7 @@ import {Container} from '../ui/Container';
 
 export interface ContentSectionProps {
   id?: string;
+  'aria-labelledby'?: string;
   children: React.ReactNode;
   surface?: 'canvas' | 'white';
   bordered?: boolean;
@@ -14,6 +15,7 @@ export interface ContentSectionProps {
 
 export function ContentSection({
   id,
+  'aria-labelledby': ariaLabelledBy,
   children,
   surface = 'canvas',
   bordered = false,
@@ -24,6 +26,7 @@ export function ContentSection({
   return (
     <section
       id={id}
+      aria-labelledby={ariaLabelledBy}
       className={cn(
         surface === 'white' ? 'bg-white' : 'bg-slate-50',
         bordered && 'border-y border-slate-200',

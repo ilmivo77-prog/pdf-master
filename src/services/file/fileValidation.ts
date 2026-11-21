@@ -37,6 +37,63 @@ export function extractFileExtension(fileName: string): string {
   return sanitized.slice(lastDotIndex).toLowerCase();
 }
 
+export type MagicByteFileKind = 'pdf' | 'jpeg' | 'png' | 'unknown';
+
+const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d] as const; // %PDF-
+const JPEG_MAGIC = [0xff, 0xd8, 0xff] as const;
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
+
+function matchesBytesAt(
+  bytes: Uint8Array,
+  signature: readonly number[],
+  offset = 0
+): boolean {
+  if (bytes.length < offset + signature.length) {
+    return false;
+  }
+  for (let i = 0; i < signature.length; i += 1) {
+    if (bytes[offset + i] !== signature[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Inspects file header bytes rather than trusting extension or MIME type.
+ * For PDF, requires at least 8 bytes (%PDF-x.y header) so truncated headers fail.
+ */
+export function detectMagicByteKind(bytes: Uint8Array): MagicByteFileKind {
+  if (bytes.length >= 8 && matchesBytesAt(bytes, PDF_MAGIC, 0)) {
+    return 'pdf';
+  }
+  if (matchesBytesAt(bytes, JPEG_MAGIC, 0)) {
+    return 'jpeg';
+  }
+  if (matchesBytesAt(bytes, PNG_MAGIC, 0)) {
+    return 'png';
+  }
+  return 'unknown';
+}
+
+export function isPdfSignatureValid(bytes: Uint8Array): boolean {
+  return detectMagicByteKind(bytes) === 'pdf';
+}
+
+/**
+ * Reads only the leading 16 bytes lazily so whole files are not loaded at selection time.
+ */
+export async function sniffFileSignature(
+  file: File
+): Promise<MagicByteFileKind> {
+  if (file.size === 0) {
+    return 'unknown';
+  }
+  const headerSlice = file.slice(0, 16);
+  const buffer = await headerSlice.arrayBuffer();
+  return detectMagicByteKind(new Uint8Array(buffer));
+}
+
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) {
     return '0 B';

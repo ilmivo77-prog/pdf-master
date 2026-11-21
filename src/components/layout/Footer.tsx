@@ -3,6 +3,7 @@ import {SITE_CONFIG, STATIC_ROUTES} from '../../config/site';
 import {getFeaturedTools} from '../../config/toolsRegistry';
 import {useTranslation} from '../../services/localization/i18nService';
 import {PdfMasterLogo} from '../brand/PdfMasterLogo';
+import {LanguageSelector} from '../navigation/LanguageSelector';
 import {Container} from '../ui';
 
 export function Footer() {
@@ -108,11 +109,16 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-2 border-t border-slate-200 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            &copy; {SITE_CONFIG.copyrightYear} {t.brand.copyright}
-          </p>
-          <p>{t.footer.freeFirstNote}</p>
+        <div className="mt-10 flex flex-col gap-4 border-t border-slate-200 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p>
+              &copy; {SITE_CONFIG.copyrightYear} {t.brand.copyright}
+            </p>
+            <p>{t.footer.freeFirstNote}</p>
+          </div>
+          <div className="flex items-center justify-start sm:justify-end">
+            <LanguageSelector dropDirection="up" />
+          </div>
         </div>
       </Container>
     </footer>

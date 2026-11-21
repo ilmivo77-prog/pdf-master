@@ -28,7 +28,7 @@ export function PrivacyPage() {
               1. Local File Handling
             </h2>
             <p className="mt-2">
-              In the current foundation release of {SITE_CONFIG.brandName}, files you select in any tool dropzone remain strictly inside your browser session memory for client-side extension, MIME type, and size validation. No files are uploaded to remote servers, stored in databases, or shared with third parties.
+              In the current release, files are only validated locally in your browser and are not uploaded. Extension, MIME type, and size checks run in browser memory, and no file contents are sent to remote servers or stored in databases.
             </p>
           </div>
 
@@ -37,7 +37,7 @@ export function PrivacyPage() {
               2. Personal Data Collection
             </h2>
             <p className="mt-2">
-              {SITE_CONFIG.brandName} does not require user accounts, login credentials, or personal profiles. We do not collect tracking cookies or behavioral advertising profiles.
+              In the current release, {SITE_CONFIG.brandName} has no user accounts, login forms, or backend database storage, and sets no tracking cookies or advertising scripts.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export function PrivacyPage() {
               3. Future Processing Architecture
             </h2>
             <p className="mt-2">
-              As individual PDF processing engines are introduced in upcoming milestones, operations that run directly in the browser will continue to keep documents on your device. Whenever a future tool requires server-side processing (such as complex document format conversions or OCR), clear retention, cleanup, and transport policies will be published and enforced before those tools are enabled.
+              PDF processing is not implemented in the current release. Future browser-based tools are planned to process files on your device, and if any future tool requires server-side processing (such as complex document conversions or OCR), updated data-handling and retention details will be published before that tool is enabled.
             </p>
           </div>
 

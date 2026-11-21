@@ -56,10 +56,10 @@ export function AboutPage() {
 
           <Card padding="md">
             <h2 className="text-lg font-semibold text-slate-900">
-              Current Stage: Design System & Foundation
+              Current Stage: Discovery &amp; Foundation
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              The platform currently provides the application architecture, centralized tool registry, SEO metadata system, localization framework, client-side file validation layer, and accessible UI design system. Processing engines for individual PDF operations will follow in upcoming milestones.
+              The platform currently provides tool discovery and search, dedicated tool landing pages, client-side file validation, and the UI design system. No files are uploaded or processed in this release; processing engines for individual PDF operations will follow in upcoming milestones.
             </p>
             <div className="mt-5">
               <Link

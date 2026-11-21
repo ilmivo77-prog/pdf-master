@@ -3,12 +3,23 @@ import {useEffect, useRef, useState} from 'react';
 import {LOCALE_CATALOG} from '../../config/locales';
 import {useTranslation} from '../../services/localization/i18nService';
 
-export function LanguageSelector() {
+interface LanguageSelectorProps {
+  dropDirection?: 'down' | 'up';
+}
+
+export function LanguageSelector({dropDirection = 'down'}: LanguageSelectorProps) {
   const {localeConfig, t} = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const activeLocales = LOCALE_CATALOG.filter((item) => item.isActive);
+  const hasMultipleActiveLocales = activeLocales.length > 1;
+
   useEffect(() => {
+    if (!hasMultipleActiveLocales) {
+      return undefined;
+    }
+
     const handleOutsideClick = (event: MouseEvent) => {
       if (
         containerRef.current &&
@@ -30,7 +41,21 @@ export function LanguageSelector() {
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, []);
+  }, [hasMultipleActiveLocales]);
+
+  // Only English is currently implemented; display an honest non-interactive label
+  // instead of a dropdown implying other languages work.
+  if (!hasMultipleActiveLocales) {
+    return (
+      <span
+        aria-label={`${t.nav.languageLabel}: ${localeConfig.nativeName}`}
+        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 whitespace-nowrap shrink-0"
+      >
+        <Globe className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+        <span>{localeConfig.nativeName}</span>
+      </span>
+    );
+  }
 
   return (
     <div ref={containerRef} className="relative">
@@ -40,7 +65,7 @@ export function LanguageSelector() {
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={`${t.nav.languageLabel}: ${localeConfig.name}`}
-        className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50 whitespace-nowrap shrink-0"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50 whitespace-nowrap shrink-0"
       >
         <Globe className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
         <span>{localeConfig.code.toUpperCase()}</span>
@@ -54,35 +79,26 @@ export function LanguageSelector() {
         <div
           role="listbox"
           aria-label={t.nav.languageLabel}
-          className="absolute end-0 z-40 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/5"
+          className={`absolute end-0 z-40 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/5 ${
+            dropDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
         >
-          <div className="border-b border-slate-100 px-2.5 py-2 text-xs text-slate-500">
-            English is active. Architecture supports 25+ languages including RTL.
-          </div>
-          <ul className="mt-1.5 max-h-64 space-y-0.5 overflow-y-auto">
-            {LOCALE_CATALOG.map((item) => (
+          <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+            {activeLocales.map((item) => (
               <li key={item.code}>
                 <button
                   type="button"
                   role="option"
-                  aria-selected={item.isActive}
-                  disabled={!item.isActive}
+                  aria-selected={item.code === localeConfig.code}
                   onClick={() => setIsOpen(false)}
                   className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-start text-xs transition-colors ${
-                    item.isActive
+                    item.code === localeConfig.code
                       ? 'bg-blue-50 font-semibold text-blue-800'
-                      : 'cursor-not-allowed text-slate-400'
+                      : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span className="truncate">
                     {item.nativeName} · {item.name}
-                  </span>
-                  <span className="ms-2 shrink-0 text-[11px]">
-                    {item.isActive
-                      ? 'Active'
-                      : item.direction === 'rtl'
-                        ? 'Planned · RTL'
-                        : 'Planned'}
                   </span>
                 </button>
               </li>

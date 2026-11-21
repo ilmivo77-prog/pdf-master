@@ -38,14 +38,18 @@ export function SeoHead({
       return undefined;
     }
 
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.setAttribute('data-route-schema', 'true');
-    script.textContent = JSON.stringify(structuredData);
-    document.head.appendChild(script);
+    const entries = Array.isArray(structuredData) ? structuredData : [structuredData];
+    const scripts = entries.map((entry) => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-route-schema', 'true');
+      script.textContent = JSON.stringify(entry);
+      document.head.appendChild(script);
+      return script;
+    });
 
     return () => {
-      script.remove();
+      scripts.forEach((script) => script.remove());
     };
   }, [structuredData]);
 

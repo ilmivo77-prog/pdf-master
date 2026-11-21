@@ -42,7 +42,6 @@ export interface LocaleConfig {
 export interface TranslationDictionary {
   brand: {
     name: string;
-    tagline: string;
     shortDescription: string;
     copyright: string;
   };
@@ -58,15 +57,37 @@ export interface TranslationDictionary {
     openMenu: string;
     closeMenu: string;
   };
+  search: {
+    placeholder: string;
+    ariaLabel: string;
+    noResultsTitle: string;
+    noResultsDescription: string;
+    browseAllLink: string;
+    resultsHint: string;
+  };
   home: {
+    heroEyebrow: string;
     heroHeadline: string;
     heroSubheadline: string;
     heroPrimaryCta: string;
     heroSecondaryCta: string;
-    toolsSectionTitle: string;
-    toolsSectionSubtitle: string;
+    popularToolsTitle: string;
+    popularToolsSubtitle: string;
+    viewAllToolsLink: string;
     categoriesSectionTitle: string;
     categoriesSectionSubtitle: string;
+    categoryToolSingular: string;
+    categoryToolPlural: string;
+    featuredToolsTitle: string;
+    featuredToolsSubtitle: string;
+    openToolCta: string;
+    whySectionTitle: string;
+    whySectionSubtitle: string;
+    whyBenefits: {
+      title: string;
+      description: string;
+      tag?: string;
+    }[];
     howItWorksTitle: string;
     howItWorksSubtitle: string;
     howItWorksSteps: {
@@ -75,12 +96,20 @@ export interface TranslationDictionary {
       description: string;
     }[];
     howItWorksDisclaimer: string;
-    trustSectionTitle: string;
-    trustSectionSubtitle: string;
-    trustPillars: {
-      title: string;
-      description: string;
+    roadmapStripTitle: string;
+    roadmapPlannedLabel: string;
+    roadmapLiveLabel: string;
+    roadmapCategoriesLabel: string;
+    faqSectionTitle: string;
+    faqSectionSubtitle: string;
+    faqItems: {
+      id: string;
+      question: string;
+      answer: string;
     }[];
+    finalCtaTitle: string;
+    finalCtaDescription: string;
+    finalCtaButton: string;
   };
   toolsDirectory: {
     pageTitle: string;
@@ -88,9 +117,14 @@ export interface TranslationDictionary {
     searchPlaceholder: string;
     searchLabel: string;
     allCategoriesFilter: string;
+    availableOnlyLabel: string;
+    availableOnlyDescription: string;
+    invalidCategoryNotice: string;
     showingCountLabel: string;
     emptyStateTitle: string;
     emptyStateDescription: string;
+    emptyAvailableTitle: string;
+    emptyAvailableDescription: string;
     clearFiltersCta: string;
     statusPlanned: string;
     statusAvailable: string;
@@ -119,8 +153,48 @@ export interface TranslationDictionary {
     maxFilesPrefix: string;
     selectedFilesHeading: string;
     validationSuccessText: string;
-    validationNoticeText: string;
     processUnavailableNotice: string;
+  };
+  processing: {
+    statusLabels: {
+      idle: string;
+      validating: string;
+      queued: string;
+      processing: string;
+      succeeded: string;
+      failed: string;
+      cancelled: string;
+    };
+    cancelButton: string;
+    retryButton: string;
+    elapsedLabel: string;
+    stageDefaultLabel: string;
+    downloadButton: string;
+    discardResultsButton: string;
+    outputsHeading: string;
+    warningsHeading: string;
+    statsHeading: string;
+    pagesLabel: string;
+    protectedLabel: string;
+    protectedYes: string;
+    protectedNo: string;
+    metadataTitleLabel: string;
+    metadataProducerLabel: string;
+    noOutputsNotice: string;
+  };
+  processingErrors: {
+    invalidFile: string;
+    notAPdf: string;
+    passwordProtectedPdf: string;
+    corruptPdf: string;
+    fileTooLarge: string;
+    tooManyFiles: string;
+    outOfMemory: string;
+    workerCrashed: string;
+    cancelled: string;
+    engineNotFound: string;
+    notImplemented: string;
+    unknown: string;
   };
   footer: {
     toolsHeading: string;

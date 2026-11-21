@@ -16,7 +16,7 @@ export interface SeoMetadata {
   robots?: RobotsDirective;
   ogType?: 'website' | 'article';
   keywords?: string[];
-  structuredData?: Record<string, unknown>;
+  structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
   alternates?: HreflangEntry[];
 }
 

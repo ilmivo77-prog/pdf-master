@@ -7,6 +7,7 @@ export interface SectionHeadingProps {
   subtitle?: string;
   action?: React.ReactNode;
   as?: 'h1' | 'h2' | 'h3';
+  headingId?: string;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export function SectionHeading({
   subtitle,
   action,
   as: HeadingTag = 'h2',
+  headingId,
   className,
 }: SectionHeadingProps) {
   return (
@@ -30,6 +32,7 @@ export function SectionHeading({
           <p className="text-xs font-semibold text-blue-700">{eyebrow}</p>
         )}
         <HeadingTag
+          id={headingId}
           className={cn(
             'font-bold tracking-tight text-slate-900 text-balance',
             eyebrow && 'mt-1.5',

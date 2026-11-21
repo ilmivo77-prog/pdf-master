@@ -40,6 +40,11 @@ const DesignSystemPage = lazy(() =>
     default: mod.DesignSystemPage,
   }))
 );
+const DevPipelinePage = lazy(() =>
+  import('../pages/DevPipelinePage').then((mod) => ({
+    default: mod.DevPipelinePage,
+  }))
+);
 
 function ScrollManager() {
   const {pathname, hash} = useLocation();
@@ -84,6 +89,13 @@ function DevOnlyDesignSystemRoute() {
   return <DesignSystemPage />;
 }
 
+function DevOnlyPipelineRoute() {
+  if (!import.meta.env.DEV) {
+    return <NotFoundPage />;
+  }
+  return <DevPipelinePage />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -99,6 +111,7 @@ export function AppRouter() {
             <Route path={STATIC_ROUTES.privacyPolicy} element={<PrivacyPage />} />
             <Route path={STATIC_ROUTES.terms} element={<TermsPage />} />
             <Route path="/design-system" element={<DevOnlyDesignSystemRoute />} />
+            <Route path="/dev/pipeline" element={<DevOnlyPipelineRoute />} />
             <Route path="/:slug" element={<ToolLandingPage />} />
 
             {/* Localized URL Prefix Architecture (e.g. /en, /en/merge-pdf) */}

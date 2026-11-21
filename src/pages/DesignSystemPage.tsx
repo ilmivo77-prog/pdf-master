@@ -553,7 +553,7 @@ export function DesignSystemPage() {
               <EmptyState
                 icon={<FileQuestion className="h-6 w-6" />}
                 title="Empty State Pattern"
-                description="Shown cleanly when search queries or filters match zero tools."
+                description="Shown cleanly when search queries or filters match no tools."
                 action={<Button size="sm">Reset Filters</Button>}
               />
             </div>

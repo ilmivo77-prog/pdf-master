@@ -155,8 +155,8 @@ export function ContactPage() {
               </div>
 
               {validatedPreview && (
-                <Alert variant="success">
-                  Form validation succeeded locally. Because a backend mail service is not yet enabled, no message was transmitted or stored.
+                <Alert variant="info">
+                  Input validation passed locally, but no message was sent because backend message delivery is not connected in this release.
                 </Alert>
               )}
             </form>

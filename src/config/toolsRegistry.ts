@@ -116,8 +116,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'Merge PDF Files Online – PDF Master',
     seoDescription:
       'Combine multiple PDF files into one organized document with PDF Master. Fast browser-ready file preparation and clean page ordering.',
-    keywords: ['merge pdf', 'combine pdf', 'join pdf files'],
+    keywords: ['merge pdf', 'combine', 'combine pdf', 'join', 'join pdf files', 'append'],
     isFeatured: true,
+    featured: true,
+    popularityRank: 1,
     relatedToolIds: ['split-pdf', 'compress-pdf', 'rotate-pdf'],
   },
   {
@@ -139,8 +141,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'Split PDF Pages Online – PDF Master',
     seoDescription:
       'Extract individual pages or divide a large PDF into smaller documents using PDF Master.',
-    keywords: ['split pdf', 'extract pdf pages', 'separate pdf'],
+    keywords: ['split pdf', 'extract', 'extract pdf pages', 'separate', 'divide pdf'],
     isFeatured: true,
+    featured: true,
+    popularityRank: 2,
     relatedToolIds: ['merge-pdf', 'rotate-pdf', 'compress-pdf'],
   },
   {
@@ -162,8 +166,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'Compress PDF Online – Reduce PDF Size | PDF Master',
     seoDescription:
       'Shrink large PDF documents for easier sharing and faster uploads with PDF Master.',
-    keywords: ['compress pdf', 'reduce pdf size', 'optimize pdf'],
+    keywords: ['compress pdf', 'reduce size', 'reduce pdf size', 'shrink', 'optimize pdf'],
     isFeatured: true,
+    featured: true,
+    popularityRank: 3,
     relatedToolIds: ['merge-pdf', 'split-pdf', 'pdf-to-jpg'],
   },
   {
@@ -185,8 +191,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'PDF to Word Converter Online – PDF Master',
     seoDescription:
       'Transform static PDF documents into editable Word files cleanly with PDF Master.',
-    keywords: ['pdf to word', 'pdf to docx', 'convert pdf to word'],
+    keywords: ['pdf to word', 'pdf to docx', 'convert pdf to word', 'editable word', 'doc'],
     isFeatured: true,
+    featured: true,
+    popularityRank: 4,
     relatedToolIds: ['word-to-pdf', 'pdf-to-jpg', 'compress-pdf'],
   },
   {
@@ -208,8 +216,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'Word to PDF Converter Online – PDF Master',
     seoDescription:
       'Convert DOC and DOCX documents into clean, print-ready PDF files with PDF Master.',
-    keywords: ['word to pdf', 'docx to pdf', 'convert word to pdf'],
-    isFeatured: true,
+    keywords: ['word to pdf', 'docx to pdf', 'doc to pdf', 'convert word to pdf'],
+    isFeatured: false,
+    featured: false,
+    popularityRank: 5,
     relatedToolIds: ['pdf-to-word', 'jpg-to-pdf', 'merge-pdf'],
   },
   {
@@ -231,8 +241,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'JPG to PDF Converter Online – PDF Master',
     seoDescription:
       'Combine JPG and JPEG photos into a clean, shareable PDF document using PDF Master.',
-    keywords: ['jpg to pdf', 'jpeg to pdf', 'image to pdf'],
-    isFeatured: true,
+    keywords: ['jpg to pdf', 'jpeg to pdf', 'image to pdf', 'photo to pdf'],
+    isFeatured: false,
+    featured: false,
+    popularityRank: 6,
     relatedToolIds: ['pdf-to-jpg', 'merge-pdf', 'compress-pdf'],
   },
   {
@@ -254,8 +266,10 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'PDF to JPG Converter Online – PDF Master',
     seoDescription:
       'Convert individual PDF pages into crisp JPG images directly from PDF Master.',
-    keywords: ['pdf to jpg', 'pdf to image', 'export pdf pages'],
+    keywords: ['pdf to jpg', 'pdf to image', 'export pdf pages', 'jpeg'],
     isFeatured: false,
+    featured: false,
+    popularityRank: 7,
     relatedToolIds: ['jpg-to-pdf', 'split-pdf', 'compress-pdf'],
   },
   {
@@ -277,15 +291,17 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'Rotate PDF Pages Online – PDF Master',
     seoDescription:
       'Rotate upside-down or sideways PDF pages permanently with PDF Master.',
-    keywords: ['rotate pdf', 'turn pdf pages', 'fix pdf orientation'],
+    keywords: ['rotate pdf', 'turn pdf pages', 'fix pdf orientation', 'flip'],
     isFeatured: false,
+    featured: false,
+    popularityRank: 8,
     relatedToolIds: ['merge-pdf', 'split-pdf', 'compress-pdf'],
   },
   {
     id: 'protect-pdf',
     name: 'Protect PDF',
     slug: 'protect-pdf',
-    description: 'Restrict unauthorized viewing or copying by adding password security to a PDF.',
+    description: 'Restrict unauthorized viewing or copying by adding password protection to a PDF.',
     category: 'security',
     icon: 'lock',
     route: '/protect-pdf',
@@ -299,9 +315,11 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     executionMode: 'hybrid',
     seoTitle: 'Protect PDF with Password – PDF Master',
     seoDescription:
-      'Secure sensitive PDF documents with password protection using PDF Master.',
-    keywords: ['protect pdf', 'password protect pdf', 'lock pdf'],
+      'Add password protection to PDF documents using PDF Master.',
+    keywords: ['protect pdf', 'password protect pdf', 'lock pdf', 'restrict'],
     isFeatured: false,
+    featured: false,
+    popularityRank: 9,
     relatedToolIds: ['unlock-pdf', 'merge-pdf', 'compress-pdf'],
   },
   {
@@ -323,11 +341,22 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     seoTitle: 'Unlock PDF Password Online – PDF Master',
     seoDescription:
       'Remove password restrictions from authorized PDF files with PDF Master.',
-    keywords: ['unlock pdf', 'remove pdf password', 'decrypt pdf'],
+    keywords: ['unlock pdf', 'remove pdf password', 'decrypt pdf', 'unprotect'],
     isFeatured: false,
+    featured: false,
+    popularityRank: 10,
     relatedToolIds: ['protect-pdf', 'split-pdf', 'compress-pdf'],
   },
 ];
+
+export function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export function getAllCategories(): ToolCategoryDefinition[] {
   return [...TOOL_CATEGORIES].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -344,7 +373,20 @@ export function getAllTools(): PdfToolDefinition[] {
 }
 
 export function getFeaturedTools(): PdfToolDefinition[] {
-  return PDF_TOOLS_REGISTRY.filter((tool) => tool.isFeatured);
+  return PDF_TOOLS_REGISTRY.filter((tool) => tool.featured ?? tool.isFeatured);
+}
+
+export function getPopularTools(limit?: number): PdfToolDefinition[] {
+  const sorted = [...PDF_TOOLS_REGISTRY].sort((a, b) => {
+    const rankA = a.popularityRank ?? Number.MAX_SAFE_INTEGER;
+    const rankB = b.popularityRank ?? Number.MAX_SAFE_INTEGER;
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  return typeof limit === 'number' && limit >= 0 ? sorted.slice(0, limit) : sorted;
 }
 
 export function getToolBySlug(slug: string): PdfToolDefinition | undefined {
@@ -357,32 +399,103 @@ export function getToolsByCategory(
   return PDF_TOOLS_REGISTRY.filter((tool) => tool.category === categoryId);
 }
 
+function scoreToolMatch(
+  tool: PdfToolDefinition,
+  normalizedQuery: string
+): number {
+  const normalizedName = normalizeSearchText(tool.name);
+  const normalizedDescription = normalizeSearchText(tool.description);
+  const normalizedKeywords = tool.keywords.map(normalizeSearchText);
+  const categoryName = normalizeSearchText(
+    getCategoryById(tool.category)?.name ?? ''
+  );
+
+  // Ranking order: exact name match > name partial > keyword match > category/description match
+  if (normalizedName === normalizedQuery) {
+    return 100;
+  }
+  if (normalizedName.startsWith(normalizedQuery)) {
+    return 85;
+  }
+  if (normalizedName.includes(normalizedQuery)) {
+    return 70;
+  }
+
+  if (normalizedKeywords.some((kw) => kw === normalizedQuery)) {
+    return 60;
+  }
+  if (normalizedKeywords.some((kw) => kw.includes(normalizedQuery))) {
+    return 50;
+  }
+
+  // Multi-word query fallback: every query token appears across name + keywords + category
+  const queryTokens = normalizedQuery.split(' ').filter(Boolean);
+  const combinedKeywordsAndName = `${normalizedName} ${normalizedKeywords.join(' ')}`;
+  if (
+    queryTokens.length > 1 &&
+    queryTokens.every((token) => combinedKeywordsAndName.includes(token))
+  ) {
+    return 45;
+  }
+
+  if (categoryName.includes(normalizedQuery)) {
+    return 30;
+  }
+
+  if (normalizedDescription.includes(normalizedQuery)) {
+    return 20;
+  }
+
+  if (
+    queryTokens.length > 1 &&
+    queryTokens.every((token) =>
+      `${combinedKeywordsAndName} ${categoryName} ${normalizedDescription}`.includes(
+        token
+      )
+    )
+  ) {
+    return 15;
+  }
+
+  return 0;
+}
+
 export function searchTools(
   query: string,
   categoryFilter?: ToolCategoryId | 'all'
 ): PdfToolDefinition[] {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(query);
 
-  return PDF_TOOLS_REGISTRY.filter((tool) => {
-    const matchesCategory =
-      !categoryFilter || categoryFilter === 'all' || tool.category === categoryFilter;
-
-    if (!matchesCategory) {
-      return false;
-    }
-
-    if (!normalizedQuery) {
-      return true;
-    }
-
-    const categoryName = getCategoryById(tool.category)?.name.toLowerCase() ?? '';
+  const categoryFiltered = PDF_TOOLS_REGISTRY.filter((tool) => {
     return (
-      tool.name.toLowerCase().includes(normalizedQuery) ||
-      tool.description.toLowerCase().includes(normalizedQuery) ||
-      categoryName.includes(normalizedQuery) ||
-      tool.keywords.some((kw) => kw.toLowerCase().includes(normalizedQuery))
+      !categoryFilter ||
+      categoryFilter === 'all' ||
+      tool.category === categoryFilter
     );
   });
+
+  if (!normalizedQuery) {
+    return categoryFiltered;
+  }
+
+  return categoryFiltered
+    .map((tool) => ({
+      tool,
+      score: scoreToolMatch(tool, normalizedQuery),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      const rankA = a.tool.popularityRank ?? Number.MAX_SAFE_INTEGER;
+      const rankB = b.tool.popularityRank ?? Number.MAX_SAFE_INTEGER;
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+      return a.tool.name.localeCompare(b.tool.name);
+    })
+    .map((entry) => entry.tool);
 }
 
 export function getRelatedTools(
@@ -423,7 +536,7 @@ export function getToolRoutesForSitemap(): SitemapRouteEntry[] {
   ).map((tool) => ({
     path: tool.route,
     changeFrequency: 'weekly',
-    priority: tool.isFeatured ? 0.85 : 0.8,
+    priority: (tool.featured ?? tool.isFeatured) ? 0.85 : 0.8,
   }));
 
   return [...staticEntries, ...toolEntries];

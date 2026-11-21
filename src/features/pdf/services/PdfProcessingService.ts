@@ -6,6 +6,8 @@ import type {
   PdfProcessingResult,
   PdfProcessorEngine,
 } from '../../../types/pdf';
+import {defaultEngineRegistry} from '../engine/engineRegistry';
+import type {PdfEngine} from '../engine/types';
 
 export class PdfProcessingException extends Error {
   public readonly code: PdfProcessingError['code'];
@@ -44,6 +46,10 @@ export class PdfProcessingService {
       }
     }
     return undefined;
+  }
+
+  public getCoreEngineForTool(toolId: string): PdfEngine | undefined {
+    return defaultEngineRegistry.getEngineForTool(toolId);
   }
 
   public isOperationAvailable(operation: PdfOperationType): boolean {

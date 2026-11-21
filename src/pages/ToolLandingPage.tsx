@@ -63,7 +63,7 @@ export function ToolLandingPage() {
       id: 'privacy',
       title: 'Are my files uploaded to a server when I test the dropzone?',
       content:
-        'No. Files selected on this page remain strictly in your browser memory for local validation and are never transmitted to any remote server.',
+        'In the current release, files are only validated locally in your browser and are not uploaded.',
     },
   ];
 

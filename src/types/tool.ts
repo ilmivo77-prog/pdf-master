@@ -60,5 +60,7 @@ export interface PdfToolDefinition {
   seoDescription: string;
   keywords: string[];
   isFeatured: boolean;
+  featured?: boolean;
+  popularityRank?: number;
   relatedToolIds?: string[];
 }

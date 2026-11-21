@@ -1,0 +1,205 @@
+import {PDFDocument} from 'pdf-lib';
+import {buildOutputFileName} from '../../../../services/file/downloadManager';
+import {isPdfSignatureValid} from '../../../../services/file/fileValidation';
+import {createProcessingError, mapPdfLibError} from '../errorTaxonomy';
+import type {
+  PdfEngine,
+  PdfEngineContext,
+  PdfEngineInputFile,
+  PdfInspectionMetadata,
+  ProcessingResult,
+} from '../types';
+
+export interface PdfInspectOptions {
+  mode?: 'inspect' | 'roundtrip';
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw createProcessingError('CANCELLED', 'Aborted via AbortSignal.');
+  }
+}
+
+function readCleanMetadata(doc: PDFDocument): PdfInspectionMetadata {
+  const title = doc.getTitle()?.trim() || undefined;
+  const author = doc.getAuthor()?.trim() || undefined;
+  const subject = doc.getSubject()?.trim() || undefined;
+  const creator = doc.getCreator()?.trim() || undefined;
+  const producer = doc.getProducer()?.trim() || undefined;
+
+  return {
+    ...(title ? {title} : {}),
+    ...(author ? {author} : {}),
+    ...(subject ? {subject} : {}),
+    ...(creator ? {creator} : {}),
+    ...(producer ? {producer} : {}),
+  };
+}
+
+export const pdfInspectEngine: PdfEngine = {
+  id: 'pdf-inspect',
+  // Internal self-test tool IDs only — never registered for public tools.
+  supportedToolIds: ['internal:pdf-inspect', 'internal:pdf-roundtrip'],
+
+  async run(
+    input: PdfEngineInputFile[],
+    options: Record<string, unknown>,
+    ctx: PdfEngineContext
+  ): Promise<ProcessingResult> {
+    const startedAt = Date.now();
+    const mode =
+      options.mode === 'roundtrip' ? 'roundtrip' : 'inspect';
+
+    throwIfAborted(ctx.signal);
+
+    if (input.length === 0) {
+      throw createProcessingError('INVALID_FILE', 'Expected 1 PDF file, received 0.');
+    }
+    if (input.length > 1) {
+      throw createProcessingError(
+        'TOO_MANY_FILES',
+        `Expected 1 PDF file, received ${input.length}.`
+      );
+    }
+
+    const file = input[0];
+    const bytes = new Uint8Array(file.bytes);
+
+    if (bytes.byteLength === 0) {
+      throw createProcessingError('INVALID_FILE', `File "${file.name}" is empty.`);
+    }
+
+    ctx.onProgress({
+      mode: 'determinate',
+      percent: 15,
+      stageLabel: 'Verifying PDF header',
+    });
+
+    if (!isPdfSignatureValid(bytes)) {
+      throw createProcessingError(
+        'NOT_A_PDF',
+        `File "${file.name}" does not start with a valid %PDF-x.y signature.`
+      );
+    }
+
+    throwIfAborted(ctx.signal);
+
+    ctx.onProgress({
+      mode: 'determinate',
+      percent: 45,
+      stageLabel: 'Loading PDF structure',
+    });
+
+    let pdfDoc: PDFDocument;
+    let isEncrypted = false;
+    const warnings: string[] = [];
+
+    try {
+      pdfDoc = await PDFDocument.load(bytes, {
+        ignoreEncryption: false,
+        updateMetadata: false,
+      });
+    } catch (err) {
+      const mapped = mapPdfLibError(err);
+      if (mapped.code === 'ENCRYPTED_PDF') {
+        isEncrypted = true;
+        if (mode === 'roundtrip') {
+          throw mapped;
+        }
+        try {
+          pdfDoc = await PDFDocument.load(bytes, {
+            ignoreEncryption: true,
+            updateMetadata: false,
+          });
+          warnings.push(
+            'This PDF is password-protected; inspection details are read-only and roundtrip re-saving is disabled.'
+          );
+        } catch (encryptedFallbackErr) {
+          throw mapPdfLibError(encryptedFallbackErr);
+        }
+      } else {
+        throw mapped;
+      }
+    }
+
+    throwIfAborted(ctx.signal);
+
+    ctx.onProgress({
+      mode: 'determinate',
+      percent: 75,
+      stageLabel:
+        mode === 'roundtrip' ? 'Re-saving PDF document' : 'Reading PDF metadata',
+    });
+
+    let pageCount: number;
+    let metadata: PdfInspectionMetadata;
+    try {
+      pageCount = pdfDoc.getPageCount();
+      metadata = readCleanMetadata(pdfDoc);
+    } catch (err) {
+      throw mapPdfLibError(err);
+    }
+
+    if (mode === 'inspect') {
+      ctx.onProgress({
+        mode: 'determinate',
+        percent: 100,
+        stageLabel: 'Inspection complete',
+      });
+
+      return {
+        outputs: [],
+        warnings,
+        stats: {
+          durationMs: Math.max(0, Date.now() - startedAt),
+          inputFileCount: 1,
+          inputTotalBytes: bytes.byteLength,
+          outputFileCount: 0,
+          outputTotalBytes: 0,
+          pageCount,
+          isEncrypted,
+          metadata,
+        },
+      };
+    }
+
+    let savedBytes: Uint8Array;
+    try {
+      savedBytes = await pdfDoc.save({useObjectStreams: true});
+    } catch (err) {
+      throw mapPdfLibError(err);
+    }
+
+    throwIfAborted(ctx.signal);
+
+    ctx.onProgress({
+      mode: 'determinate',
+      percent: 100,
+      stageLabel: 'Roundtrip complete',
+    });
+
+    const outputName = buildOutputFileName(file.name, 'roundtrip', '.pdf');
+
+    return {
+      outputs: [
+        {
+          name: outputName,
+          mimeType: 'application/pdf',
+          bytes: savedBytes,
+          size: savedBytes.byteLength,
+        },
+      ],
+      warnings,
+      stats: {
+        durationMs: Math.max(0, Date.now() - startedAt),
+        inputFileCount: 1,
+        inputTotalBytes: bytes.byteLength,
+        outputFileCount: 1,
+        outputTotalBytes: savedBytes.byteLength,
+        pageCount,
+        isEncrypted,
+        metadata,
+      },
+    };
+  },
+};

@@ -28,7 +28,7 @@ export function TermsPage() {
               1. Acceptance of Terms
             </h2>
             <p className="mt-2">
-              By accessing {SITE_CONFIG.brandName}, you agree to use the platform strictly for lawful document management tasks and in accordance with these terms.
+              By accessing {SITE_CONFIG.brandName}, you agree to use the platform only for lawful document tasks and in accordance with these terms.
             </p>
           </div>
 
