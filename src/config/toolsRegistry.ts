@@ -1,0 +1,430 @@
+import type {
+  PdfToolDefinition,
+  ToolCategoryDefinition,
+  ToolCategoryId,
+} from '../types/tool';
+import type {SitemapRouteEntry} from '../types/seo';
+import {SITE_CONFIG, STATIC_ROUTES} from './site';
+
+export const TOOL_CATEGORIES: ToolCategoryDefinition[] = [
+  {
+    id: 'organize-pdf',
+    name: 'Organize PDF',
+    slug: 'organize-pdf',
+    description: 'Combine, split, reorder, and structure pages across PDF documents.',
+    icon: 'layers',
+    accentColorClass: 'text-blue-700',
+    accentSurfaceClass: 'bg-blue-50',
+    displayOrder: 1,
+  },
+  {
+    id: 'optimize-pdf',
+    name: 'Optimize PDF',
+    slug: 'optimize-pdf',
+    description: 'Reduce document file size and clean internal structure for faster sharing.',
+    icon: 'compress',
+    accentColorClass: 'text-emerald-700',
+    accentSurfaceClass: 'bg-emerald-50',
+    displayOrder: 2,
+  },
+  {
+    id: 'convert-to-pdf',
+    name: 'Convert to PDF',
+    slug: 'convert-to-pdf',
+    description: 'Turn office documents, spreadsheets, and images into standard PDFs.',
+    icon: 'file-text',
+    accentColorClass: 'text-sky-700',
+    accentSurfaceClass: 'bg-sky-50',
+    displayOrder: 3,
+  },
+  {
+    id: 'convert-from-pdf',
+    name: 'Convert from PDF',
+    slug: 'convert-from-pdf',
+    description: 'Export PDF pages into editable Word files or crisp raster images.',
+    icon: 'images',
+    accentColorClass: 'text-amber-800',
+    accentSurfaceClass: 'bg-amber-50',
+    displayOrder: 4,
+  },
+  {
+    id: 'edit-pdf',
+    name: 'Edit PDF',
+    slug: 'edit-pdf',
+    description: 'Rotate pages, add page numbers, insert watermarks, and annotate.',
+    icon: 'edit',
+    accentColorClass: 'text-indigo-700',
+    accentSurfaceClass: 'bg-indigo-50',
+    displayOrder: 5,
+  },
+  {
+    id: 'security',
+    name: 'Security',
+    slug: 'security',
+    description: 'Add password protection, manage permissions, and unlock authorized files.',
+    icon: 'shield',
+    accentColorClass: 'text-slate-700',
+    accentSurfaceClass: 'bg-slate-100',
+    displayOrder: 6,
+  },
+  {
+    id: 'ocr-extraction',
+    name: 'OCR and Extraction',
+    slug: 'ocr-extraction',
+    description: 'Recognize scanned text and extract text, tables, or embedded assets.',
+    icon: 'scan-text',
+    accentColorClass: 'text-teal-700',
+    accentSurfaceClass: 'bg-teal-50',
+    displayOrder: 7,
+  },
+  {
+    id: 'ai-pdf-tools',
+    name: 'AI PDF Tools',
+    slug: 'ai-pdf-tools',
+    description: 'Future intelligent document summarization, Q&A, and structured extraction.',
+    icon: 'sparkles',
+    accentColorClass: 'text-violet-700',
+    accentSurfaceClass: 'bg-violet-50',
+    displayOrder: 8,
+  },
+];
+
+const PDF_MIME_TYPES = ['application/pdf'];
+const WORD_MIME_TYPES = [
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+const JPG_MIME_TYPES = ['image/jpeg'];
+
+export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
+  {
+    id: 'merge-pdf',
+    name: 'Merge PDF',
+    slug: 'merge-pdf',
+    description: 'Combine multiple PDF documents into a single file in your preferred order.',
+    category: 'organize-pdf',
+    icon: 'merge',
+    route: '/merge-pdf',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: true,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 20,
+    status: 'planned',
+    executionMode: 'client',
+    seoTitle: 'Merge PDF Files Online – PDF Master',
+    seoDescription:
+      'Combine multiple PDF files into one organized document with PDF Master. Fast browser-ready file preparation and clean page ordering.',
+    keywords: ['merge pdf', 'combine pdf', 'join pdf files'],
+    isFeatured: true,
+    relatedToolIds: ['split-pdf', 'compress-pdf', 'rotate-pdf'],
+  },
+  {
+    id: 'split-pdf',
+    name: 'Split PDF',
+    slug: 'split-pdf',
+    description: 'Separate a multi-page PDF into individual pages or custom page ranges.',
+    category: 'organize-pdf',
+    icon: 'split',
+    route: '/split-pdf',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.pdf', '.zip'],
+    allowMultipleFiles: false,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 1,
+    status: 'planned',
+    executionMode: 'client',
+    seoTitle: 'Split PDF Pages Online – PDF Master',
+    seoDescription:
+      'Extract individual pages or divide a large PDF into smaller documents using PDF Master.',
+    keywords: ['split pdf', 'extract pdf pages', 'separate pdf'],
+    isFeatured: true,
+    relatedToolIds: ['merge-pdf', 'rotate-pdf', 'compress-pdf'],
+  },
+  {
+    id: 'compress-pdf',
+    name: 'Compress PDF',
+    slug: 'compress-pdf',
+    description: 'Reduce PDF file size while keeping text and visuals readable for email and web.',
+    category: 'optimize-pdf',
+    icon: 'compress',
+    route: '/compress-pdf',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: true,
+    maxFileSizeBytes: 50 * 1024 * 1024,
+    maxFilesCount: 10,
+    status: 'planned',
+    executionMode: 'hybrid',
+    seoTitle: 'Compress PDF Online – Reduce PDF Size | PDF Master',
+    seoDescription:
+      'Shrink large PDF documents for easier sharing and faster uploads with PDF Master.',
+    keywords: ['compress pdf', 'reduce pdf size', 'optimize pdf'],
+    isFeatured: true,
+    relatedToolIds: ['merge-pdf', 'split-pdf', 'pdf-to-jpg'],
+  },
+  {
+    id: 'pdf-to-word',
+    name: 'PDF to Word',
+    slug: 'pdf-to-word',
+    description: 'Convert PDF documents into editable Word (.docx) files for quick revisions.',
+    category: 'convert-from-pdf',
+    icon: 'file-text',
+    route: '/pdf-to-word',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.docx'],
+    allowMultipleFiles: true,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 5,
+    status: 'planned',
+    executionMode: 'server',
+    seoTitle: 'PDF to Word Converter Online – PDF Master',
+    seoDescription:
+      'Transform static PDF documents into editable Word files cleanly with PDF Master.',
+    keywords: ['pdf to word', 'pdf to docx', 'convert pdf to word'],
+    isFeatured: true,
+    relatedToolIds: ['word-to-pdf', 'pdf-to-jpg', 'compress-pdf'],
+  },
+  {
+    id: 'word-to-pdf',
+    name: 'Word to PDF',
+    slug: 'word-to-pdf',
+    description: 'Convert Microsoft Word (.doc, .docx) documents into universally readable PDFs.',
+    category: 'convert-to-pdf',
+    icon: 'file-spreadsheet',
+    route: '/word-to-pdf',
+    supportedInputFormats: ['.doc', '.docx'],
+    supportedInputMimeTypes: WORD_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: true,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 5,
+    status: 'planned',
+    executionMode: 'server',
+    seoTitle: 'Word to PDF Converter Online – PDF Master',
+    seoDescription:
+      'Convert DOC and DOCX documents into clean, print-ready PDF files with PDF Master.',
+    keywords: ['word to pdf', 'docx to pdf', 'convert word to pdf'],
+    isFeatured: true,
+    relatedToolIds: ['pdf-to-word', 'jpg-to-pdf', 'merge-pdf'],
+  },
+  {
+    id: 'jpg-to-pdf',
+    name: 'JPG to PDF',
+    slug: 'jpg-to-pdf',
+    description: 'Turn JPG and JPEG images into a formatted single or multi-page PDF document.',
+    category: 'convert-to-pdf',
+    icon: 'image',
+    route: '/jpg-to-pdf',
+    supportedInputFormats: ['.jpg', '.jpeg'],
+    supportedInputMimeTypes: JPG_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: true,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 25,
+    status: 'planned',
+    executionMode: 'client',
+    seoTitle: 'JPG to PDF Converter Online – PDF Master',
+    seoDescription:
+      'Combine JPG and JPEG photos into a clean, shareable PDF document using PDF Master.',
+    keywords: ['jpg to pdf', 'jpeg to pdf', 'image to pdf'],
+    isFeatured: true,
+    relatedToolIds: ['pdf-to-jpg', 'merge-pdf', 'compress-pdf'],
+  },
+  {
+    id: 'pdf-to-jpg',
+    name: 'PDF to JPG',
+    slug: 'pdf-to-jpg',
+    description: 'Render PDF pages into high-clarity JPG images for slides, previews, and web use.',
+    category: 'convert-from-pdf',
+    icon: 'images',
+    route: '/pdf-to-jpg',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.jpg', '.zip'],
+    allowMultipleFiles: false,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 1,
+    status: 'planned',
+    executionMode: 'client',
+    seoTitle: 'PDF to JPG Converter Online – PDF Master',
+    seoDescription:
+      'Convert individual PDF pages into crisp JPG images directly from PDF Master.',
+    keywords: ['pdf to jpg', 'pdf to image', 'export pdf pages'],
+    isFeatured: false,
+    relatedToolIds: ['jpg-to-pdf', 'split-pdf', 'compress-pdf'],
+  },
+  {
+    id: 'rotate-pdf',
+    name: 'Rotate PDF',
+    slug: 'rotate-pdf',
+    description: 'Fix sideways or upside-down PDF pages permanently by 90, 180, or 270 degrees.',
+    category: 'edit-pdf',
+    icon: 'rotate-cw',
+    route: '/rotate-pdf',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: true,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 10,
+    status: 'planned',
+    executionMode: 'client',
+    seoTitle: 'Rotate PDF Pages Online – PDF Master',
+    seoDescription:
+      'Rotate upside-down or sideways PDF pages permanently with PDF Master.',
+    keywords: ['rotate pdf', 'turn pdf pages', 'fix pdf orientation'],
+    isFeatured: false,
+    relatedToolIds: ['merge-pdf', 'split-pdf', 'compress-pdf'],
+  },
+  {
+    id: 'protect-pdf',
+    name: 'Protect PDF',
+    slug: 'protect-pdf',
+    description: 'Restrict unauthorized viewing or copying by adding password security to a PDF.',
+    category: 'security',
+    icon: 'lock',
+    route: '/protect-pdf',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: false,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 1,
+    status: 'planned',
+    executionMode: 'hybrid',
+    seoTitle: 'Protect PDF with Password – PDF Master',
+    seoDescription:
+      'Secure sensitive PDF documents with password protection using PDF Master.',
+    keywords: ['protect pdf', 'password protect pdf', 'lock pdf'],
+    isFeatured: false,
+    relatedToolIds: ['unlock-pdf', 'merge-pdf', 'compress-pdf'],
+  },
+  {
+    id: 'unlock-pdf',
+    name: 'Unlock PDF',
+    slug: 'unlock-pdf',
+    description: 'Remove password restrictions from PDF files you are authorized to access.',
+    category: 'security',
+    icon: 'unlock',
+    route: '/unlock-pdf',
+    supportedInputFormats: ['.pdf'],
+    supportedInputMimeTypes: PDF_MIME_TYPES,
+    supportedOutputFormats: ['.pdf'],
+    allowMultipleFiles: false,
+    maxFileSizeBytes: SITE_CONFIG.defaultMaxFileSizeBytes,
+    maxFilesCount: 1,
+    status: 'planned',
+    executionMode: 'hybrid',
+    seoTitle: 'Unlock PDF Password Online – PDF Master',
+    seoDescription:
+      'Remove password restrictions from authorized PDF files with PDF Master.',
+    keywords: ['unlock pdf', 'remove pdf password', 'decrypt pdf'],
+    isFeatured: false,
+    relatedToolIds: ['protect-pdf', 'split-pdf', 'compress-pdf'],
+  },
+];
+
+export function getAllCategories(): ToolCategoryDefinition[] {
+  return [...TOOL_CATEGORIES].sort((a, b) => a.displayOrder - b.displayOrder);
+}
+
+export function getCategoryById(
+  categoryId: ToolCategoryId
+): ToolCategoryDefinition | undefined {
+  return TOOL_CATEGORIES.find((cat) => cat.id === categoryId);
+}
+
+export function getAllTools(): PdfToolDefinition[] {
+  return PDF_TOOLS_REGISTRY;
+}
+
+export function getFeaturedTools(): PdfToolDefinition[] {
+  return PDF_TOOLS_REGISTRY.filter((tool) => tool.isFeatured);
+}
+
+export function getToolBySlug(slug: string): PdfToolDefinition | undefined {
+  return PDF_TOOLS_REGISTRY.find((tool) => tool.slug === slug);
+}
+
+export function getToolsByCategory(
+  categoryId: ToolCategoryId
+): PdfToolDefinition[] {
+  return PDF_TOOLS_REGISTRY.filter((tool) => tool.category === categoryId);
+}
+
+export function searchTools(
+  query: string,
+  categoryFilter?: ToolCategoryId | 'all'
+): PdfToolDefinition[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return PDF_TOOLS_REGISTRY.filter((tool) => {
+    const matchesCategory =
+      !categoryFilter || categoryFilter === 'all' || tool.category === categoryFilter;
+
+    if (!matchesCategory) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    const categoryName = getCategoryById(tool.category)?.name.toLowerCase() ?? '';
+    return (
+      tool.name.toLowerCase().includes(normalizedQuery) ||
+      tool.description.toLowerCase().includes(normalizedQuery) ||
+      categoryName.includes(normalizedQuery) ||
+      tool.keywords.some((kw) => kw.toLowerCase().includes(normalizedQuery))
+    );
+  });
+}
+
+export function getRelatedTools(
+  tool: PdfToolDefinition,
+  limit = 3
+): PdfToolDefinition[] {
+  const explicitIds = tool.relatedToolIds ?? [];
+  const explicitTools = explicitIds
+    .map((id) => PDF_TOOLS_REGISTRY.find((item) => item.id === id))
+    .filter((item): item is PdfToolDefinition => Boolean(item && item.id !== tool.id));
+
+  if (explicitTools.length >= limit) {
+    return explicitTools.slice(0, limit);
+  }
+
+  const sameCategoryFallbacks = PDF_TOOLS_REGISTRY.filter(
+    (item) =>
+      item.id !== tool.id &&
+      item.category === tool.category &&
+      !explicitTools.some((existing) => existing.id === item.id)
+  );
+
+  return [...explicitTools, ...sameCategoryFallbacks].slice(0, limit);
+}
+
+export function getToolRoutesForSitemap(): SitemapRouteEntry[] {
+  const staticEntries: SitemapRouteEntry[] = [
+    {path: STATIC_ROUTES.home, changeFrequency: 'weekly', priority: 1.0},
+    {path: STATIC_ROUTES.tools, changeFrequency: 'weekly', priority: 0.9},
+    {path: STATIC_ROUTES.about, changeFrequency: 'monthly', priority: 0.6},
+    {path: STATIC_ROUTES.contact, changeFrequency: 'monthly', priority: 0.5},
+    {path: STATIC_ROUTES.privacyPolicy, changeFrequency: 'monthly', priority: 0.4},
+    {path: STATIC_ROUTES.terms, changeFrequency: 'monthly', priority: 0.4},
+  ];
+
+  const toolEntries: SitemapRouteEntry[] = PDF_TOOLS_REGISTRY.filter(
+    (tool) => tool.status !== 'planned'
+  ).map((tool) => ({
+    path: tool.route,
+    changeFrequency: 'weekly',
+    priority: tool.isFeatured ? 0.85 : 0.8,
+  }));
+
+  return [...staticEntries, ...toolEntries];
+}

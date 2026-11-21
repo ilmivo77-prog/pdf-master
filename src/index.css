@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --pm-bg-canvas: #f8fafc;
+  --pm-bg-surface: #ffffff;
+  --pm-bg-subtle: #f1f5f9;
+  --pm-bg-muted: #e2e8f0;
+
+  --pm-border-subtle: #e2e8f0;
+  --pm-border-strong: #cbd5e1;
+
+  --pm-text-primary: #0f172a;
+  --pm-text-secondary: #334155;
+  --pm-text-muted: #475569;
+
+  --pm-primary-50: #eff6ff;
+  --pm-primary-100: #dbeafe;
+  --pm-primary-200: #bfdbfe;
+  --pm-primary-500: #2563eb;
+  --pm-primary-600: #1d4ed8;
+  --pm-primary-700: #1e40af;
+  --pm-primary-800: #1e3a8a;
+
+  --pm-success-50: #ecfdf5;
+  --pm-success-200: #a7f3d0;
+  --pm-success-700: #047857;
+
+  --pm-warning-50: #fffbeb;
+  --pm-warning-200: #fde68a;
+  --pm-warning-700: #b45309;
+
+  --pm-danger-50: #fef2f2;
+  --pm-danger-200: #fecaca;
+  --pm-danger-600: #dc2626;
+  --pm-danger-700: #b91c1c;
+
+  --pm-info-50: #f0f9ff;
+  --pm-info-200: #bae6fd;
+  --pm-info-700: #0369a1;
+}
+
+@theme {
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand-50: var(--pm-primary-50);
+  --color-brand-100: var(--pm-primary-100);
+  --color-brand-200: var(--pm-primary-200);
+  --color-brand-500: var(--pm-primary-500);
+  --color-brand-600: var(--pm-primary-600);
+  --color-brand-700: var(--pm-primary-700);
+  --color-brand-800: var(--pm-primary-800);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--pm-bg-canvas);
+    color: var(--pm-text-primary);
+    scroll-behavior: smooth;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--pm-primary-600);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes pm-indeterminate-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.pm-progress-indeterminate {
+  animation: pm-indeterminate-progress 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
