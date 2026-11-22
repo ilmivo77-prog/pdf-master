@@ -20,7 +20,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     closeMenu: 'Close navigation menu',
   },
   search: {
-    placeholder: 'Search PDF tools (e.g., merge, split, extract, remove)...',
+    placeholder: 'Search PDF tools (e.g., merge, split, organize, extract)...',
     ariaLabel: 'Search PDF tools',
     noResultsTitle: 'No tools found',
     noResultsDescription:
@@ -32,7 +32,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     heroEyebrow: 'PDF Master · Browser PDF Utilities',
     heroHeadline: 'All Your PDF Tools. One Simple Platform.',
     heroSubheadline:
-      'Merge, split, extract, and remove PDF pages directly inside your browser, with conversion, optimization, and editing utilities rolling out milestone by milestone.',
+      'Merge, split, organize, extract, and remove PDF pages directly inside your browser, with conversion, optimization, and editing utilities rolling out milestone by milestone.',
     heroPrimaryCta: 'Browse all tools',
     heroSecondaryCta: 'How it works',
     popularToolsTitle: 'Popular PDF Tools',
@@ -99,7 +99,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
       },
     ],
     howItWorksDisclaimer:
-      'Availability note: Merge PDF, Split PDF, Extract Pages, and Remove Pages run today inside your browser. Tools marked Coming soon remain in local file-validation preview.',
+      'Availability note: Merge PDF, Split PDF, Organize PDF, Extract Pages, and Remove Pages run today inside your browser. Tools marked Coming soon remain in local file-validation preview.',
     roadmapStripTitle: 'Current Platform Catalog',
     roadmapPlannedLabel: 'tools planned',
     roadmapLiveLabel: 'live',
@@ -124,13 +124,13 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
         id: 'availability',
         question: 'Which PDF tools can process files right now?',
         answer:
-          'Merge PDF, Split PDF, Extract Pages, and Remove Pages are live inside your browser. Remaining tools stay marked Coming soon while their engines are built milestone by milestone.',
+          'Merge PDF, Split PDF, Organize PDF, Extract Pages, and Remove Pages are live inside your browser. Remaining tools stay marked Coming soon while their engines are built milestone by milestone.',
       },
       {
         id: 'file-handling',
         question: 'How are my files handled right now?',
         answer:
-          'For the four available tools, files are processed inside your browser by the page’s own code and are not sent to a server by PDF Master. Results exist only in browser memory for your current session. Planned tools only run local validation checks. When serving the site, the hosting provider may keep standard server logs such as IP address and requested URL.',
+          'For live browser tools, files are processed inside your browser by the page’s own code and are not sent to a server by PDF Master. Results exist only in browser memory for your current session. Planned tools only run local validation checks. When serving the site, the hosting provider may keep standard server logs such as IP address and requested URL.',
       },
       {
         id: 'languages',
@@ -148,7 +148,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     pageTitle: 'All PDF Tools',
     pageSubtitle:
       'Browse the centralized PDF Master tool catalog. Search by task, filter by category, or view only live browser tools.',
-    searchPlaceholder: 'Search PDF tools (e.g., merge, split, extract, remove)...',
+    searchPlaceholder: 'Search PDF tools (e.g., merge, split, organize, extract)...',
     searchLabel: 'Search PDF tools',
     allCategoriesFilter: 'All Categories',
     availableOnlyLabel: 'Show only available tools',
@@ -265,6 +265,42 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
         'Removing all pages would leave an empty PDF. Deselect at least one page to keep.',
       runButton: 'Remove Pages',
     },
+    organize: {
+      heading: '1. Arrange, Rotate, or Remove Pages',
+      helperText:
+        'Reorder pages using the card arrows or drag-and-drop, rotate individual or selected pages, and mark unwanted pages for removal.',
+      selectAllButton: 'Select all',
+      clearSelectionButton: 'Clear selection',
+      rotateSelectedLeftButton: 'Rotate selected left',
+      rotateSelectedRightButton: 'Rotate selected right',
+      deleteSelectedButton: 'Remove selected',
+      restoreAllButton: 'Restore all',
+      reverseOrderButton: 'Reverse order',
+      resetOrderButton: 'Reset',
+      summaryKeptSingular: 'page will be kept',
+      summaryKeptPlural: 'pages will be kept',
+      summaryRemovedLabel: 'removed',
+      summarySelectedLabel: 'selected',
+      emptyResultError:
+        'All pages are currently marked for removal. Restore at least one page to create an output PDF.',
+      largeDocNotice:
+        'Large document: page thumbnails load only as cards scroll into view to manage browser memory.',
+      hardCapNotice:
+        'Thumbnail previews are disabled above the 1,000-page preview limit to protect browser memory. You can still reorder, rotate, and remove pages by page number.',
+      libraryFailedNotice:
+        'Thumbnail preview rendering is unavailable in this browser session, so page cards show page numbers only. You can still reorder, rotate, and remove pages.',
+      thumbnailsLoadingNotice: 'Loading page thumbnail renderer...',
+      pageLabel: 'Page',
+      removedBadge: 'Removed',
+      selectPageLabel: 'Select page',
+      moveEarlierLabel: 'earlier',
+      moveLaterLabel: 'later',
+      rotateLeftLabel: 'left 90 degrees',
+      rotateRightLabel: 'right 90 degrees',
+      deletePageLabel: 'Remove page',
+      restorePageLabel: 'Restore page',
+      runButton: 'Save Organized PDF',
+    },
     pageRangeErrors: {
       EMPTY_INPUT: 'Enter one or more page numbers or ranges (for example: 1-3, 5).',
       INPUT_TOO_LONG: 'The page range input is too long. Shorten the range expression.',
@@ -307,6 +343,8 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     noOutputsNotice: 'No output files were produced for this inspection run.',
     interactiveFeaturesNote:
       'Some interactive features such as bookmarks or form fields may not be preserved.',
+    visualVerificationAdvice:
+      'Open the downloaded file in your PDF viewer to confirm it looks right before using it. PDF Master does not inspect the visual content of your pages.',
   },
   processingErrors: {
     invalidFile:

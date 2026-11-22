@@ -5,12 +5,18 @@ export interface ProcessingLimitsConfig {
   maxSplitOutputs: number;
   jobTimeoutMs: number;
   devTestMaxFileSizeBytes: number;
+  organizeThumbnailLazyThreshold: number;
+  organizeThumbnailHardCap: number;
+  organizeThumbnailMaxCached: number;
+  organizeThumbnailMaxCachedLarge: number;
+  maxOrganizePages: number;
 }
 
 // Conservative defaults for mobile browser Web Worker memory budgets.
 // maxSplitOutputs is capped at 50 because each split PDF allocates independent
 // document/object structures and uncompressed output buffers before ZIP packaging.
-// To be validated by real-device testing in upcoming milestones.
+// Organize thumbnail thresholds (300 lazy-only, 1000 hard cap, 80/48 cached URLs,
+// 2000 output pages) are conservative defaults — to be validated on real devices.
 export const PROCESSING_LIMITS: ProcessingLimitsConfig = {
   maxFileSizeBytes: 25 * 1024 * 1024, // 25 MB per file
   maxTotalSizeBytes: 50 * 1024 * 1024, // 50 MB total job payload
@@ -18,6 +24,11 @@ export const PROCESSING_LIMITS: ProcessingLimitsConfig = {
   maxSplitOutputs: 50, // max 50 output PDFs generated in a single Split run
   jobTimeoutMs: 60_000, // 60s watchdog timeout per job
   devTestMaxFileSizeBytes: 50 * 1024 * 1024, // 50 MB ceiling for dev pipeline inspection
+  organizeThumbnailLazyThreshold: 300, // Above 300 pages, render only intersecting cards (to be validated on real devices)
+  organizeThumbnailHardCap: 1000, // Above 1000 pages, disable thumbnails and organize by page number (to be validated on real devices)
+  organizeThumbnailMaxCached: 80, // Live thumbnail ObjectURL cache cap (to be validated on real devices)
+  organizeThumbnailMaxCachedLarge: 48, // Tighter cache cap for >300-page PDFs (to be validated on real devices)
+  maxOrganizePages: 2000, // Max page operations per Organize PDF run (to be validated on real devices)
 };
 
 export const PRODUCTION_TOOL_LIMITS = {
@@ -26,6 +37,9 @@ export const PRODUCTION_TOOL_LIMITS = {
   maxFilesCount: PROCESSING_LIMITS.maxFilesCount,
   maxSplitOutputs: PROCESSING_LIMITS.maxSplitOutputs,
   jobTimeoutMs: PROCESSING_LIMITS.jobTimeoutMs,
+  organizeThumbnailLazyThreshold: PROCESSING_LIMITS.organizeThumbnailLazyThreshold,
+  organizeThumbnailHardCap: PROCESSING_LIMITS.organizeThumbnailHardCap,
+  maxOrganizePages: PROCESSING_LIMITS.maxOrganizePages,
 } as const;
 
 export interface LimitValidationFailure {

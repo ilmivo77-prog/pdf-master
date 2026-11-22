@@ -4,6 +4,7 @@ import {EngineRegistry} from '../engineRegistry';
 import {pdfExtractEngine} from '../engines/pdfExtractEngine';
 import {pdfInspectEngine} from '../engines/pdfInspectEngine';
 import {pdfMergeEngine} from '../engines/pdfMergeEngine';
+import {pdfOrganizeEngine} from '../engines/pdfOrganizeEngine';
 import {pdfRemoveEngine} from '../engines/pdfRemoveEngine';
 import {pdfSplitEngine} from '../engines/pdfSplitEngine';
 import {createProcessingError, isOutOfMemoryError} from '../errorTaxonomy';
@@ -18,6 +19,7 @@ workerEngineRegistry.registerEngine(pdfMergeEngine);
 workerEngineRegistry.registerEngine(pdfSplitEngine);
 workerEngineRegistry.registerEngine(pdfExtractEngine);
 workerEngineRegistry.registerEngine(pdfRemoveEngine);
+workerEngineRegistry.registerEngine(pdfOrganizeEngine);
 
 const activeControllers = new Map<string, AbortController>();
 

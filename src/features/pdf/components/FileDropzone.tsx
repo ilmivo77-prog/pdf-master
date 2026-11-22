@@ -1,4 +1,4 @@
-import React, {useId, useRef, useState} from 'react';
+import React, {useEffect, useId, useRef, useState} from 'react';
 import {CheckCircle2, FileText, Trash2, Upload} from 'lucide-react';
 import {Alert, Badge, Button, IconButton} from '../../../components/ui';
 import {cn} from '../../../lib/cn';
@@ -43,10 +43,19 @@ export function FileDropzone({
   const {t} = useTranslation();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const errorAlertRef = useRef<HTMLDivElement>(null);
+  const shouldFocusErrorRef = useRef(false);
 
   const [internalFiles, setInternalFiles] = useState<ManagedFileItem[]>([]);
   const [errors, setErrors] = useState<FileValidationError[]>(initialErrors);
   const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (errors.length > 0 && shouldFocusErrorRef.current) {
+      shouldFocusErrorRef.current = false;
+      errorAlertRef.current?.focus();
+    }
+  }, [errors]);
 
   const files = controlledFiles ?? internalFiles;
 
@@ -84,6 +93,7 @@ export function FileDropzone({
     const result = validateSelectedFiles(incoming, validationRule, baseFiles);
     const updatedFiles = [...baseFiles, ...result.acceptedFiles];
 
+    shouldFocusErrorRef.current = result.errors.length > 0;
     setErrors(result.errors);
     updateFiles(updatedFiles);
   };
@@ -240,17 +250,23 @@ export function FileDropzone({
       </div>
 
       {errors.length > 0 && (
-        <Alert
-          variant="danger"
-          title="File validation error"
-          onDismiss={() => setErrors([])}
+        <div
+          ref={errorAlertRef}
+          tabIndex={-1}
+          className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
         >
-          <ul className="list-disc space-y-1 ps-4">
-            {errors.map((err, idx) => (
-              <li key={`${err.code}-${idx}`}>{err.message}</li>
-            ))}
-          </ul>
-        </Alert>
+          <Alert
+            variant="danger"
+            title="File validation error"
+            onDismiss={() => setErrors([])}
+          >
+            <ul className="list-disc space-y-1 ps-4">
+              {errors.map((err, idx) => (
+                <li key={`${err.code}-${idx}`}>{err.message}</li>
+              ))}
+            </ul>
+          </Alert>
+        </div>
       )}
 
       {!hideQueue && files.length > 0 && (

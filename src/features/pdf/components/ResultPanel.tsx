@@ -152,6 +152,10 @@ export function ResultPanel({
           </Alert>
         )}
 
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700">
+          {t.processing.visualVerificationAdvice}
+        </p>
+
         <div>
           <h3 className="text-sm font-semibold text-slate-900">
             {t.processing.outputsHeading}

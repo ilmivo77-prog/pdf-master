@@ -29,7 +29,8 @@ export type ToolIconName =
   | 'edit'
   | 'shield'
   | 'extract'
-  | 'remove';
+  | 'remove'
+  | 'organize';
 
 export interface ToolCategoryDefinition {
   id: ToolCategoryId;

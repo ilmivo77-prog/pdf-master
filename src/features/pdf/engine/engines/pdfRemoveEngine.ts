@@ -59,14 +59,10 @@ export const pdfRemoveEngine: PdfEngine = {
       stageLabel: 'Loading PDF document',
     });
 
-    let srcDoc: PDFDocument | null = await loadUnencryptedPdf(file, ctx.signal);
-    let sourcePageCount: number;
-    try {
-      sourcePageCount = srcDoc.getPageCount();
-    } catch (err) {
-      srcDoc = null;
-      throw mapPdfLibError(err);
-    }
+    const loaded = await loadUnencryptedPdf(file, ctx.signal);
+    let srcDoc: PDFDocument | null = loaded.doc;
+    const sourcePageCount = loaded.pageCount;
+    const warnings = [...loaded.warnings];
 
     const parsed = parsePageRanges(rangesText, sourcePageCount);
     if (!parsed.ok) {
@@ -161,7 +157,7 @@ export const pdfRemoveEngine: PdfEngine = {
           size: outBytes.byteLength,
         },
       ],
-      warnings: [],
+      warnings,
       stats: {
         durationMs: Math.max(0, Date.now() - startedAt),
         inputFileCount: 1,

@@ -8,6 +8,7 @@ import {
   FileText,
   Image,
   Layers,
+  LayoutGrid,
   Lock,
   Minimize2,
   RotateCw,
@@ -34,6 +35,8 @@ export function ToolIcon({name, className = 'h-5 w-5'}: ToolIconProps) {
       return <FileOutput className={className} aria-hidden="true" />;
     case 'remove':
       return <FileMinus2 className={className} aria-hidden="true" />;
+    case 'organize':
+      return <LayoutGrid className={className} aria-hidden="true" />;
     case 'compress':
       return <Minimize2 className={className} aria-hidden="true" />;
     case 'file-text':

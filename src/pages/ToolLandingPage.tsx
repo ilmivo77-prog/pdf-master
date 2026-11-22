@@ -22,6 +22,12 @@ const ToolWorkspace = lazy(() =>
   }))
 );
 
+const OrganizerWorkspace = lazy(() =>
+  import('../features/pdf/organize/OrganizerWorkspace').then((mod) => ({
+    default: mod.OrganizerWorkspace,
+  }))
+);
+
 export function ToolLandingPage() {
   const {slug = ''} = useParams<{slug: string}>();
 
@@ -141,7 +147,11 @@ export function ToolLandingPage() {
                 </div>
               }
             >
-              <ToolWorkspace tool={tool} validationRule={validationRule} />
+              {tool.id === 'organize-pdf' ? (
+                <OrganizerWorkspace tool={tool} validationRule={validationRule} />
+              ) : (
+                <ToolWorkspace tool={tool} validationRule={validationRule} />
+              )}
             </Suspense>
           )
         }

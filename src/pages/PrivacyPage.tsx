@@ -28,7 +28,7 @@ export function PrivacyPage() {
               1. Local File Processing &amp; Validation
             </h2>
             <p className="mt-2">
-              For the four available tools (Merge PDF, Split PDF, Extract Pages, and Remove Pages), files are processed inside your browser by the page’s own code and are not sent to a server by {SITE_CONFIG.brandName}. All input bytes and generated results exist only in browser memory for your current session and are cleared when you discard results, close the tab, or reload the page. Tools still marked Coming soon only run local format and size validation in your browser.
+              For available tools (Merge PDF, Split PDF, Organize PDF, Extract Pages, and Remove Pages), files are processed inside your browser by the page’s own code and are not sent to a server by {SITE_CONFIG.brandName}. On Organize PDF, page thumbnail previews are rendered locally inside your browser using pdf.js (a third-party open-source library) and self-hosted helper assets served from our own origin without uploading files. All input bytes and generated results exist only in browser memory for your current session and are cleared when you discard results, close the tab, or reload the page. Tools still marked Coming soon only run local format and size validation in your browser.
             </p>
           </div>
 

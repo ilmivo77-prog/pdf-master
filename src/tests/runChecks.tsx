@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
-import {PDFArray, PDFDocument, PDFName, PDFNumber, PDFRef, StandardFonts} from 'pdf-lib';
+import {PDFArray, PDFDocument, PDFName, PDFNumber, PDFRef, StandardFonts, degrees} from 'pdf-lib';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemoryRouter, Route, Routes} from 'react-router-dom';
@@ -47,15 +47,32 @@ import {
   mapPdfLibError,
   type ProcessingErrorCode,
 } from '../features/pdf/engine';
+import {getToolRichContent} from '../config/toolPageContent';
 import {pdfExtractEngine} from '../features/pdf/engine/engines/pdfExtractEngine';
 import {pdfInspectEngine} from '../features/pdf/engine/engines/pdfInspectEngine';
 import {pdfMergeEngine} from '../features/pdf/engine/engines/pdfMergeEngine';
+import {
+  pdfOrganizeEngine,
+  validateOrganizeOperations,
+} from '../features/pdf/engine/engines/pdfOrganizeEngine';
 import {pdfRemoveEngine} from '../features/pdf/engine/engines/pdfRemoveEngine';
 import {pdfSplitEngine} from '../features/pdf/engine/engines/pdfSplitEngine';
 import {
+  checkPdfTailHeuristic,
+  preparePdfBytes,
   verifyPdfPageIntegrity,
   verifySavedPdfOutput,
 } from '../features/pdf/engine/engines/sharedPdfUtils';
+import {
+  buildOrganizeOperations,
+  createInitialOrganizeState,
+  getOrganizeCounts,
+  organizeReducer,
+} from '../features/pdf/organize/organizeReducer';
+import {
+  OrganizeGridSection,
+  OrganizerWorkspace,
+} from '../features/pdf/organize/OrganizerWorkspace';
 import {pdfProcessingService} from '../features/pdf/services/PdfProcessingService';
 import {
   chunkPagesBySize,
@@ -86,6 +103,7 @@ import {
   detectMagicByteKind,
   isPdfSignatureValid,
   sanitizeFileName,
+  sniffFileSignature,
   validateSelectedFiles,
 } from '../services/file/fileValidation';
 import {LocaleProvider} from '../services/localization/i18nService';
@@ -190,7 +208,7 @@ async function run() {
   // 2. Registry, search ranking, synonyms, available tools & category helpers
   const tools = getAllTools();
   const categories = getAllCategories();
-  assert.equal(tools.length, 12);
+  assert.equal(tools.length, 13);
   assert.equal(categories.length, 8);
 
   const availableIds = tools
@@ -200,6 +218,7 @@ async function run() {
   assert.deepEqual(availableIds, [
     'extract-pages',
     'merge-pdf',
+    'organize-pdf',
     'remove-pages',
     'split-pdf',
   ]);
@@ -256,6 +275,7 @@ async function run() {
   assert.ok(sitemapPaths.includes('/split-pdf'));
   assert.ok(sitemapPaths.includes('/extract-pages'));
   assert.ok(sitemapPaths.includes('/remove-pages'));
+  assert.ok(sitemapPaths.includes('/organize-pdf'));
   assert.equal(sitemapPaths.includes('/compress-pdf'), false);
   assert.equal(sitemapPaths.includes('/dev/pipeline'), false);
 
@@ -451,6 +471,7 @@ async function run() {
   registry.registerEngine(pdfSplitEngine);
   registry.registerEngine(pdfExtractEngine);
   registry.registerEngine(pdfRemoveEngine);
+  registry.registerEngine(pdfOrganizeEngine);
   assert.equal(registry.resolveEngineForTool('merge-pdf').engine?.id, 'pdf-merge');
   assert.equal(registry.resolveEngineForTool('split-pdf').engine?.id, 'pdf-split');
   assert.equal(
@@ -460,6 +481,10 @@ async function run() {
   assert.equal(
     registry.resolveEngineForTool('remove-pages').engine?.id,
     'pdf-remove'
+  );
+  assert.equal(
+    registry.resolveEngineForTool('organize-pdf').engine?.id,
+    'pdf-organize'
   );
   assert.equal(
     registry.resolveEngineForTool('compress-pdf').error?.code,
@@ -727,6 +752,382 @@ async function run() {
       ),
     (err: {code?: string}) => err?.code === 'NO_PAGES_REMAINING'
   );
+
+  // 11g2. ORGANIZE REDUCER pure state unit tests
+  {
+    let st = createInitialOrganizeState(4);
+    assert.equal(st.items.length, 4);
+    assert.deepEqual(
+      st.items.map((x) => x.originalPageNumber),
+      [1, 2, 3, 4]
+    );
+    assert.deepEqual(getOrganizeCounts(st), {
+      totalCount: 4,
+      keptCount: 4,
+      deletedCount: 0,
+      selectedCount: 0,
+    });
+
+    // Move step earlier/later + boundary no-op
+    st = organizeReducer(st, {type: 'MOVE_STEP', sourcePageIndex: 0, delta: -1});
+    assert.deepEqual(
+      st.items.map((x) => x.sourcePageIndex),
+      [0, 1, 2, 3]
+    );
+    st = organizeReducer(st, {type: 'MOVE_STEP', sourcePageIndex: 2, delta: -1});
+    assert.deepEqual(
+      st.items.map((x) => x.sourcePageIndex),
+      [0, 2, 1, 3]
+    );
+    assert.ok(st.lastAnnouncement.includes('Page 3 moved to position 2 of 4'));
+
+    st = organizeReducer(st, {type: 'MOVE_TO_INDEX', fromIndex: 3, toIndex: 0});
+    assert.deepEqual(
+      st.items.map((x) => x.sourcePageIndex),
+      [3, 0, 2, 1]
+    );
+
+    // Rotation wrapping (0 -> 270 -> 180 -> 90 -> 0)
+    st = organizeReducer(st, {type: 'ROTATE_PAGE', sourcePageIndex: 0, step: -90});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 0)?.rotationDelta, 270);
+    st = organizeReducer(st, {type: 'ROTATE_PAGE', sourcePageIndex: 0, step: -90});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 0)?.rotationDelta, 180);
+    st = organizeReducer(st, {type: 'ROTATE_PAGE', sourcePageIndex: 0, step: 90});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 0)?.rotationDelta, 270);
+    st = organizeReducer(st, {type: 'ROTATE_PAGE', sourcePageIndex: 0, step: 90});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 0)?.rotationDelta, 0);
+    st = organizeReducer(st, {type: 'ROTATE_PAGE', sourcePageIndex: 2, step: 90});
+
+    // Selection + delete + auto-deselect + restore
+    st = organizeReducer(st, {type: 'TOGGLE_SELECT_PAGE', sourcePageIndex: 1});
+    st = organizeReducer(st, {type: 'TOGGLE_SELECT_PAGE', sourcePageIndex: 3});
+    assert.equal(getOrganizeCounts(st).selectedCount, 2);
+    st = organizeReducer(st, {type: 'ROTATE_SELECTED', step: 90});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 1)?.rotationDelta, 90);
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 3)?.rotationDelta, 90);
+
+    st = organizeReducer(st, {type: 'TOGGLE_DELETE_PAGE', sourcePageIndex: 1});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 1)?.deleted, true);
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 1)?.selected, false);
+    // Selecting a deleted page is ignored
+    st = organizeReducer(st, {type: 'TOGGLE_SELECT_PAGE', sourcePageIndex: 1});
+    assert.equal(st.items.find((x) => x.sourcePageIndex === 1)?.selected, false);
+    assert.deepEqual(buildOrganizeOperations(st), [
+      {sourcePageIndex: 3, rotationDelta: 90},
+      {sourcePageIndex: 0, rotationDelta: 0},
+      {sourcePageIndex: 2, rotationDelta: 90},
+    ]);
+
+    st = organizeReducer(st, {type: 'SELECT_ALL_ACTIVE'});
+    assert.equal(getOrganizeCounts(st).selectedCount, 3);
+    st = organizeReducer(st, {type: 'DELETE_SELECTED'});
+    assert.deepEqual(getOrganizeCounts(st), {
+      totalCount: 4,
+      keptCount: 0,
+      deletedCount: 4,
+      selectedCount: 0,
+    });
+    assert.deepEqual(buildOrganizeOperations(st), []);
+
+    st = organizeReducer(st, {type: 'RESTORE_ALL'});
+    assert.equal(getOrganizeCounts(st).keptCount, 4);
+
+    st = organizeReducer(st, {type: 'RESET_ORDER'});
+    assert.deepEqual(buildOrganizeOperations(st), [
+      {sourcePageIndex: 0, rotationDelta: 0},
+      {sourcePageIndex: 1, rotationDelta: 0},
+      {sourcePageIndex: 2, rotationDelta: 0},
+      {sourcePageIndex: 3, rotationDelta: 0},
+    ]);
+
+    st = organizeReducer(st, {type: 'REVERSE_ORDER'});
+    assert.deepEqual(
+      buildOrganizeOperations(st).map((o) => o.sourcePageIndex),
+      [3, 2, 1, 0]
+    );
+  }
+
+  // 11g3. ORGANIZE PDF Engine real-PDF verification suite
+  {
+    const orgSourceBuf = await createMarkedPdf([301, 302, 303, 304]);
+
+    // Encrypted rejected with ENCRYPTED_PDF
+    await assert.rejects(
+      () =>
+        pdfOrganizeEngine.run(
+          [
+            {
+              name: 'locked.pdf',
+              mimeType: 'application/pdf',
+              size: encryptedBytes.byteLength,
+              bytes: encryptedBytes.slice(0),
+            },
+          ],
+          {operations: [{sourcePageIndex: 0, rotationDelta: 0}]},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'ENCRYPTED_PDF'
+    );
+
+    // Reorder [2, 0, 3, 1] -> [303, 301, 304, 302] + filename <base>-organized.pdf
+    const reorderRes = await pdfOrganizeEngine.run(
+      [
+        {
+          name: 'quarterly-deck.pdf',
+          mimeType: 'application/pdf',
+          size: orgSourceBuf.byteLength,
+          bytes: orgSourceBuf.slice(0),
+        },
+      ],
+      {
+        operations: [
+          {sourcePageIndex: 2, rotationDelta: 0},
+          {sourcePageIndex: 0, rotationDelta: 0},
+          {sourcePageIndex: 3, rotationDelta: 0},
+          {sourcePageIndex: 1, rotationDelta: 0},
+        ],
+      },
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.equal(reorderRes.outputs.length, 1);
+    assert.equal(reorderRes.outputs[0].name, 'quarterly-deck-organized.pdf');
+    assert.equal(reorderRes.stats.pageCount, 4);
+    assert.deepEqual(
+      await readPageWidths(reorderRes.outputs[0].bytes),
+      [303, 301, 304, 302]
+    );
+
+    // Delete subset (keep [0, 2] -> [301, 303]) & single remaining page ([2] -> [303])
+    const keepTwoRes = await pdfOrganizeEngine.run(
+      [{name: 'doc.pdf', mimeType: 'application/pdf', size: orgSourceBuf.byteLength, bytes: orgSourceBuf.slice(0)}],
+      {
+        operations: [
+          {sourcePageIndex: 0, rotationDelta: 0},
+          {sourcePageIndex: 2, rotationDelta: 0},
+        ],
+      },
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.deepEqual(await readPageWidths(keepTwoRes.outputs[0].bytes), [301, 303]);
+
+    const keepOneRes = await pdfOrganizeEngine.run(
+      [{name: 'doc.pdf', mimeType: 'application/pdf', size: orgSourceBuf.byteLength, bytes: orgSourceBuf.slice(0)}],
+      {operations: [{sourcePageIndex: 2, rotationDelta: 180}]},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    const keepOneLoaded = await PDFDocument.load(keepOneRes.outputs[0].bytes);
+    assert.equal(keepOneLoaded.getPageCount(), 1);
+    assert.equal(Math.round(keepOneLoaded.getPage(0).getWidth()), 303);
+    assert.equal(keepOneLoaded.getPage(0).getRotation().angle, 180);
+
+    // Reverse [3, 2, 1, 0] -> [304, 303, 302, 301]
+    const reverseRes = await pdfOrganizeEngine.run(
+      [{name: 'doc.pdf', mimeType: 'application/pdf', size: orgSourceBuf.byteLength, bytes: orgSourceBuf.slice(0)}],
+      {
+        operations: [
+          {sourcePageIndex: 3, rotationDelta: 0},
+          {sourcePageIndex: 2, rotationDelta: 0},
+          {sourcePageIndex: 1, rotationDelta: 0},
+          {sourcePageIndex: 0, rotationDelta: 0},
+        ],
+      },
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.deepEqual(
+      await readPageWidths(reverseRes.outputs[0].bytes),
+      [304, 303, 302, 301]
+    );
+
+    // Rotate 0, 90, 180, 270
+    const rotRes = await pdfOrganizeEngine.run(
+      [{name: 'doc.pdf', mimeType: 'application/pdf', size: orgSourceBuf.byteLength, bytes: orgSourceBuf.slice(0)}],
+      {
+        operations: [
+          {sourcePageIndex: 0, rotationDelta: 0},
+          {sourcePageIndex: 1, rotationDelta: 90},
+          {sourcePageIndex: 2, rotationDelta: 180},
+          {sourcePageIndex: 3, rotationDelta: 270},
+        ],
+      },
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    const rotLoaded = await PDFDocument.load(rotRes.outputs[0].bytes);
+    assert.deepEqual(
+      rotLoaded.getPages().map((p) => p.getRotation().angle),
+      [0, 90, 180, 270]
+    );
+
+    // Existing page /Rotate 90: +90 => 180, +270 => 0
+    const explicitRotDoc = await PDFDocument.create();
+    const erp1 = explicitRotDoc.addPage([200, 300]);
+    erp1.setRotation(degrees(90));
+    const erp2 = explicitRotDoc.addPage([210, 300]);
+    erp2.setRotation(degrees(90));
+    const explicitRotBuf = (await explicitRotDoc.save()).slice().buffer;
+
+    const explicitRotOut = await pdfOrganizeEngine.run(
+      [{name: 'rot90.pdf', mimeType: 'application/pdf', size: explicitRotBuf.byteLength, bytes: explicitRotBuf.slice(0)}],
+      {
+        operations: [
+          {sourcePageIndex: 0, rotationDelta: 90},
+          {sourcePageIndex: 1, rotationDelta: 270},
+        ],
+      },
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    const explicitRotLoaded = await PDFDocument.load(explicitRotOut.outputs[0].bytes);
+    assert.deepEqual(
+      explicitRotLoaded.getPages().map((p) => p.getRotation().angle),
+      [180, 0]
+    );
+
+    // Inherited /Rotate 90 on parent /Pages tree node
+    const inheritedRotDoc = await PDFDocument.create();
+    inheritedRotDoc.addPage([200, 300]);
+    inheritedRotDoc.addPage([210, 300]);
+    const pagesDict = inheritedRotDoc.catalog.lookup(PDFName.of('Pages')) as unknown as {
+      set: (k: PDFName, v: unknown) => void;
+    };
+    pagesDict.set(PDFName.of('Rotate'), PDFNumber.of(90));
+    const inheritedRotBuf = (await inheritedRotDoc.save()).slice().buffer;
+
+    const inheritedRotOut = await pdfOrganizeEngine.run(
+      [{name: 'inherited-rot90.pdf', mimeType: 'application/pdf', size: inheritedRotBuf.byteLength, bytes: inheritedRotBuf.slice(0)}],
+      {
+        operations: [
+          {sourcePageIndex: 0, rotationDelta: 0},
+          {sourcePageIndex: 1, rotationDelta: 90},
+        ],
+      },
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    const inheritedRotLoaded = await PDFDocument.load(inheritedRotOut.outputs[0].bytes);
+    assert.deepEqual(
+      inheritedRotLoaded.getPages().map((p) => p.getRotation().angle),
+      [90, 180]
+    );
+
+    // Validation & rejection checks
+    assert.throws(
+      () => validateOrganizeOperations([], 4),
+      (err: {code?: string}) => err?.code === 'NO_PAGES_REMAINING'
+    );
+    assert.throws(
+      () =>
+        validateOrganizeOperations(
+          [
+            {sourcePageIndex: 1, rotationDelta: 0},
+            {sourcePageIndex: 1, rotationDelta: 90},
+          ],
+          4
+        ),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+    assert.throws(
+      () =>
+        validateOrganizeOperations([{sourcePageIndex: -1, rotationDelta: 0}], 4),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+    assert.throws(
+      () =>
+        validateOrganizeOperations([{sourcePageIndex: 4, rotationDelta: 0}], 4),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+    assert.throws(
+      () =>
+        validateOrganizeOperations([{sourcePageIndex: 1.5, rotationDelta: 0}], 4),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+    assert.throws(
+      () =>
+        validateOrganizeOperations([{sourcePageIndex: 0, rotationDelta: 45}], 4),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+    assert.throws(
+      () => validateOrganizeOperations('not-an-array', 4),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+    assert.throws(
+      () =>
+        validateOrganizeOperations(
+          Array.from({length: 5}, (_, idx) => ({
+            sourcePageIndex: idx,
+            rotationDelta: 0,
+          })),
+          10,
+          4
+        ),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+
+    await assert.rejects(
+      () =>
+        pdfOrganizeEngine.run(
+          [{name: 'doc.pdf', mimeType: 'application/pdf', size: orgSourceBuf.byteLength, bytes: orgSourceBuf.slice(0)}],
+          {operations: []},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'NO_PAGES_REMAINING'
+    );
+    await assert.rejects(
+      () =>
+        pdfOrganizeEngine.run(
+          [{name: 'doc.pdf', mimeType: 'application/pdf', size: orgSourceBuf.byteLength, bytes: orgSourceBuf.slice(0)}],
+          {
+            operations: [
+              {sourcePageIndex: 0, rotationDelta: 0},
+              {sourcePageIndex: 0, rotationDelta: 90},
+            ],
+          },
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'INVALID_OPTIONS'
+    );
+
+    // Truncated input rejected with CORRUPT_PDF
+    const truncOrgBytes = new Uint8Array(orgSourceBuf).slice(
+      0,
+      Math.floor(orgSourceBuf.byteLength * 0.5)
+    );
+    await assert.rejects(
+      () =>
+        pdfOrganizeEngine.run(
+          [{name: 'trunc.pdf', mimeType: 'application/pdf', size: truncOrgBytes.byteLength, bytes: truncOrgBytes.slice().buffer}],
+          {operations: [{sourcePageIndex: 0, rotationDelta: 0}]},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'CORRUPT_PDF'
+    );
+
+    // Mid-run cancellation on multi-page PDF
+    const manyPageDoc = await PDFDocument.create();
+    for (let i = 0; i < 60; i += 1) {
+      manyPageDoc.addPage([200 + i, 300]);
+    }
+    const manyPageBuf = (await manyPageDoc.save()).slice().buffer;
+    const orgAbort = new AbortController();
+    await assert.rejects(
+      () =>
+        pdfOrganizeEngine.run(
+          [{name: 'many.pdf', mimeType: 'application/pdf', size: manyPageBuf.byteLength, bytes: manyPageBuf.slice(0)}],
+          {
+            operations: Array.from({length: 60}, (_, idx) => ({
+              sourcePageIndex: idx,
+              rotationDelta: 0,
+            })),
+          },
+          {
+            onProgress: (p) => {
+              if (p.percent >= 20) {
+                orgAbort.abort();
+              }
+            },
+            signal: orgAbort.signal,
+          }
+        ),
+      (err: {code?: string}) => err?.code === 'CANCELLED'
+    );
+  }
 
   // 11h. Mid-run cancellation via AbortSignal
   const abortMidRun = new AbortController();
@@ -1063,6 +1464,291 @@ async function run() {
     );
   }
 
+  // 11k. Round 2 real-byte tolerance, incremental update, inherited attrs, /Count mismatch, reason codes & 25 MB benchmark
+  {
+    const distinctDoc = await PDFDocument.create();
+    const distinctFont = await distinctDoc.embedFont(StandardFonts.Helvetica);
+    for (let p = 1; p <= 5; p += 1) {
+      const pg = distinctDoc.addPage([300 + p, 420]);
+      pg.drawText(`Distinct Page ${p}`, {x: 24, y: 380, size: 12, font: distinctFont});
+    }
+    const distinctBytes = await distinctDoc.save({useObjectStreams: false});
+
+    const runAllToolsAndAssertValid = async (label: string, sourceBytes: Uint8Array, expectWarningSubstr?: string) => {
+      const makeInput = (suffix = '') => ({
+        name: `${label}${suffix}.pdf`,
+        mimeType: 'application/pdf',
+        size: sourceBytes.byteLength,
+        bytes: sourceBytes.slice().buffer,
+      });
+
+      const inspectRes = await pdfInspectEngine.run(
+        [makeInput()],
+        {mode: 'inspect'},
+        {onProgress: () => {}, signal: new AbortController().signal}
+      );
+      assert.equal(inspectRes.stats.pageCount, 5, `${label} inspect expected 5 pages`);
+      if (expectWarningSubstr) {
+        assert.ok(
+          inspectRes.warnings.some((w) => w.includes(expectWarningSubstr)),
+          `${label} inspect missing warning "${expectWarningSubstr}"`
+        );
+      }
+
+      const mergeOut = await pdfMergeEngine.run(
+        [
+          makeInput('-a'),
+          {name: 'v1.pdf', mimeType: 'application/pdf', size: validPdf1.byteLength, bytes: validPdf1.slice(0)},
+        ],
+        {},
+        {onProgress: () => {}, signal: new AbortController().signal}
+      );
+      assert.equal(mergeOut.outputs.length, 1);
+      const mergedLoaded = await PDFDocument.load(mergeOut.outputs[0].bytes);
+      assert.equal(mergedLoaded.getPageCount(), 7, `${label} merge expected 7 pages`);
+      assert.deepEqual(
+        mergedLoaded.getPages().slice(0, 5).map((p) => Math.round(p.getWidth())),
+        [301, 302, 303, 304, 305]
+      );
+
+      const splitOut = await pdfSplitEngine.run(
+        [makeInput()],
+        {mode: 'ranges', rangesText: '1-2, 3-5'},
+        {onProgress: () => {}, signal: new AbortController().signal}
+      );
+      assert.equal(splitOut.outputs.length, 2);
+      assert.equal((await PDFDocument.load(splitOut.outputs[0].bytes)).getPageCount(), 2);
+      assert.equal((await PDFDocument.load(splitOut.outputs[1].bytes)).getPageCount(), 3);
+
+      const extractOut = await pdfExtractEngine.run(
+        [makeInput()],
+        {rangesText: '5, 1'},
+        {onProgress: () => {}, signal: new AbortController().signal}
+      );
+      assert.equal(extractOut.outputs.length, 1);
+      const extractedLoaded = await PDFDocument.load(extractOut.outputs[0].bytes);
+      assert.deepEqual(
+        extractedLoaded.getPages().map((p) => Math.round(p.getWidth())),
+        [305, 301]
+      );
+
+      const removeOut = await pdfRemoveEngine.run(
+        [makeInput()],
+        {rangesText: '2, 4'},
+        {onProgress: () => {}, signal: new AbortController().signal}
+      );
+      assert.equal(removeOut.outputs.length, 1);
+      const removedLoaded = await PDFDocument.load(removeOut.outputs[0].bytes);
+      assert.deepEqual(
+        removedLoaded.getPages().map((p) => Math.round(p.getWidth())),
+        [301, 303, 305]
+      );
+    };
+
+    // A) Trailing bytes after %%EOF: +2054 zeros, +102406 garbage, +2MB garbage
+    const appendBytes = (base: Uint8Array, extraLength: number, fillFn: (idx: number) => number): Uint8Array => {
+      const combined = new Uint8Array(base.byteLength + extraLength);
+      combined.set(base, 0);
+      for (let i = 0; i < extraLength; i += 1) {
+        combined[base.byteLength + i] = fillFn(i);
+      }
+      return combined;
+    };
+
+    await runAllToolsAndAssertValid('trailing-2054-zeros', appendBytes(distinctBytes, 2054, () => 0));
+    await runAllToolsAndAssertValid(
+      'trailing-102406-garbage',
+      appendBytes(distinctBytes, 102406, (i) => ((i * 37 + 13) & 0xff) === 0x25 ? 0x20 : (i * 37 + 13) & 0xff)
+    );
+    await runAllToolsAndAssertValid(
+      'trailing-2mb-garbage',
+      appendBytes(distinctBytes, 2 * 1024 * 1024, (i) => ((i * 19 + 7) & 0xff) === 0x25 ? 0x20 : (i * 19 + 7) & 0xff)
+    );
+
+    // B) Leading bytes before %PDF-: UTF-8 BOM (3 bytes), 100 junk bytes, vs 2000 junk bytes rejected
+    const prependBytes = (prefix: Uint8Array, base: Uint8Array): Uint8Array => {
+      const combined = new Uint8Array(prefix.byteLength + base.byteLength);
+      combined.set(prefix, 0);
+      combined.set(base, prefix.byteLength);
+      return combined;
+    };
+
+    const bomPrefix = new Uint8Array([0xef, 0xbb, 0xbf]);
+    const bomPdfBytes = prependBytes(bomPrefix, distinctBytes);
+    assert.equal(detectMagicByteKind(bomPdfBytes), 'pdf');
+    assert.equal(isPdfSignatureValid(bomPdfBytes), true);
+    assert.equal(
+      await sniffFileSignature(new File([bomPdfBytes.slice().buffer], 'bom.pdf', {type: 'application/pdf'})),
+      'pdf'
+    );
+    await runAllToolsAndAssertValid('leading-bom', bomPdfBytes, 'Skipped 3 leading byte(s)');
+
+    const junk100 = new Uint8Array(100);
+    junk100.fill(0x58); // 'X'
+    const junk100PdfBytes = prependBytes(junk100, distinctBytes);
+    assert.equal(detectMagicByteKind(junk100PdfBytes), 'pdf');
+    assert.equal(
+      await sniffFileSignature(new File([junk100PdfBytes.slice().buffer], 'offset100.pdf', {type: 'application/pdf'})),
+      'pdf'
+    );
+    await runAllToolsAndAssertValid('leading-100-junk', junk100PdfBytes, 'Skipped 100 leading byte(s)');
+
+    const junk2000 = new Uint8Array(2000);
+    junk2000.fill(0x58);
+    const junk2000PdfBytes = prependBytes(junk2000, distinctBytes);
+    assert.equal(detectMagicByteKind(junk2000PdfBytes), 'unknown');
+    assert.equal(
+      await sniffFileSignature(new File([junk2000PdfBytes.slice().buffer], 'offset2000.pdf', {type: 'application/pdf'})),
+      'unknown'
+    );
+    await assert.rejects(
+      () =>
+        pdfInspectEngine.run(
+          [{name: 'offset2000.pdf', mimeType: 'application/pdf', size: junk2000PdfBytes.byteLength, bytes: junk2000PdfBytes.slice().buffer}],
+          {mode: 'inspect'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string; developerDetail?: string}) =>
+        err?.code === 'NOT_A_PDF' && Boolean(err.developerDetail?.includes('[reason:header]'))
+    );
+
+    // C) /Count mismatch tolerance (declared /Count 6 and /Count 3 on a 5-page PDF) vs /Count 3 with 0 kids
+    const asciiDistinct = new TextDecoder('latin1').decode(distinctBytes);
+    for (const fakeCount of [6, 3]) {
+      const patchedStr = asciiDistinct.replace('/Count 5', `/Count ${fakeCount}`);
+      assert.notEqual(patchedStr, asciiDistinct, `Expected to patch /Count 5 -> ${fakeCount}`);
+      const patchedBytes = new Uint8Array(patchedStr.length);
+      for (let i = 0; i < patchedStr.length; i += 1) {
+        patchedBytes[i] = patchedStr.charCodeAt(i);
+      }
+      await runAllToolsAndAssertValid(`count-mismatch-${fakeCount}`, patchedBytes, `reported ${fakeCount} page(s), while 5 reachable page(s) were found`);
+    }
+
+    const emptyKidsCount3 = [
+      '%PDF-1.4\n',
+      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n',
+      '2 0 obj << /Type /Pages /Kids [] /Count 3 >> endobj\n',
+      'xref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n',
+      'trailer << /Size 3 /Root 1 0 R >>\nstartxref\n111\n%%EOF\n',
+    ].join('');
+    const emptyKidsBytes = new TextEncoder().encode(emptyKidsCount3);
+    await assert.rejects(
+      () =>
+        pdfInspectEngine.run(
+          [{name: 'empty-kids-count3.pdf', mimeType: 'application/pdf', size: emptyKidsBytes.byteLength, bytes: emptyKidsBytes.slice().buffer}],
+          {mode: 'inspect'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string; developerDetail?: string}) =>
+        err?.code === 'CORRUPT_PDF' && Boolean(err.developerDetail?.includes('[reason:page-tree]'))
+    );
+
+    // D) Hand-written incremental update PDF + inherited /MediaBox and /Resources on parent /Pages
+    const rev1Parts = [
+      '%PDF-1.4\n',
+      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n',
+      '2 0 obj << /Type /Pages /MediaBox [0 0 250 350] /Resources << >> /Kids [3 0 R] /Count 1 >> endobj\n',
+      '3 0 obj << /Type /Page /Parent 2 0 R /Contents 4 0 R >> endobj\n',
+      '4 0 obj << /Length 0 >> stream\n\nendstream endobj\n',
+    ];
+    let incOffset = 0;
+    const rev1Offsets: number[] = [];
+    for (let i = 0; i < rev1Parts.length; i += 1) {
+      if (i > 0) rev1Offsets.push(incOffset);
+      incOffset += rev1Parts[i].length;
+    }
+    const rev1XrefStart = incOffset;
+    const rev1Trailer = [
+      'xref\n0 5\n0000000000 65535 f \n',
+      ...rev1Offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`),
+      `trailer << /Size 5 /Root 1 0 R >>\nstartxref\n${rev1XrefStart}\n%%EOF\n`,
+    ].join('');
+    const rev1Str = [...rev1Parts, rev1Trailer].join('');
+    const rev2Obj2Off = rev1Str.length;
+    const rev2Obj2 = '2 0 obj << /Type /Pages /MediaBox [0 0 250 350] /Resources << >> /Kids [3 0 R 5 0 R] /Count 2 >> endobj\n';
+    const rev2Obj5Off = rev2Obj2Off + rev2Obj2.length;
+    const rev2Obj5 = '5 0 obj << /Type /Page /Parent 2 0 R /Contents 4 0 R >> endobj\n';
+    const rev2XrefOff = rev2Obj5Off + rev2Obj5.length;
+    const rev2Trailer =
+      `xref\n2 1\n${String(rev2Obj2Off).padStart(10, '0')} 00000 n \n5 1\n${String(rev2Obj5Off).padStart(10, '0')} 00000 n \n` +
+      `trailer << /Size 6 /Root 1 0 R /Prev ${rev1XrefStart} >>\nstartxref\n${rev2XrefOff}\n%%EOF\n`;
+    const incrementalBytes = new TextEncoder().encode(rev1Str + rev2Obj2 + rev2Obj5 + rev2Trailer);
+
+    const incInspect = await pdfInspectEngine.run(
+      [{name: 'incremental-inherited.pdf', mimeType: 'application/pdf', size: incrementalBytes.byteLength, bytes: incrementalBytes.slice().buffer}],
+      {mode: 'inspect'},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.equal(incInspect.stats.pageCount, 2);
+    const incExtract = await pdfExtractEngine.run(
+      [{name: 'incremental-inherited.pdf', mimeType: 'application/pdf', size: incrementalBytes.byteLength, bytes: incrementalBytes.slice().buffer}],
+      {rangesText: '2, 1'},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    const incExtractedDoc = await PDFDocument.load(incExtract.outputs[0].bytes);
+    assert.equal(incExtractedDoc.getPageCount(), 2);
+    assert.equal(Math.round(incExtractedDoc.getPage(0).getWidth()), 250);
+
+    // E) Tail-reason & page-tree cycle / dangling /Kids reason code verification
+    const noDigitTailBytes = new TextEncoder().encode(
+      `${asciiDistinct.slice(0, asciiDistinct.lastIndexOf('startxref'))}startxref\n%%EOF\n`
+    );
+    await assert.rejects(
+      () =>
+        pdfInspectEngine.run(
+          [{name: 'missing-startxref-digits.pdf', mimeType: 'application/pdf', size: noDigitTailBytes.byteLength, bytes: noDigitTailBytes.slice().buffer}],
+          {mode: 'inspect'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string; developerDetail?: string}) =>
+        err?.code === 'CORRUPT_PDF' && Boolean(err.developerDetail?.includes('[reason:tail]'))
+    );
+
+    const missingEofTailBytes = new TextEncoder().encode(
+      `${asciiDistinct.slice(0, asciiDistinct.lastIndexOf('%%EOF'))}`
+    );
+    await assert.rejects(
+      () =>
+        pdfInspectEngine.run(
+          [{name: 'missing-eof-after-startxref.pdf', mimeType: 'application/pdf', size: missingEofTailBytes.byteLength, bytes: missingEofTailBytes.slice().buffer}],
+          {mode: 'inspect'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string; developerDetail?: string}) =>
+        err?.code === 'CORRUPT_PDF' && Boolean(err.developerDetail?.includes('[reason:tail]'))
+    );
+
+    // Cycle in /Pages tree (root -> childPages -> root)
+    const cycleDoc = await PDFDocument.create();
+    const cycleChildDict = cycleDoc.context.obj({
+      Type: 'Pages',
+      Kids: [cycleDoc.catalog.get(PDFName.of('Pages'))!],
+      Count: 1,
+    });
+    const cycleChildRef = cycleDoc.context.register(cycleChildDict);
+    const cycleRootPages = cycleDoc.catalog.lookup(PDFName.of('Pages')) as unknown as {
+      set: (key: PDFName, val: unknown) => void;
+    };
+    cycleRootPages.set(PDFName.of('Kids'), cycleDoc.context.obj([cycleChildRef]));
+    assert.throws(
+      () => verifyPdfPageIntegrity(cycleDoc, new AbortController().signal, 'cycle.pdf'),
+      (err: {code?: string; developerDetail?: string}) =>
+        err?.code === 'CORRUPT_PDF' && Boolean(err.developerDetail?.includes('[reason:page-tree]'))
+    );
+
+    // F) 25 MB worst-case whole-buffer tail & header benchmark (zero 25 MB string allocation)
+    const benchmark25Mb = new Uint8Array(25 * 1024 * 1024);
+    benchmark25Mb.set(distinctBytes, 0);
+    // Fill remaining ~25 MB with non-% non-s bytes so backward scan traverses the entire 25 MB
+    benchmark25Mb.fill(0x20, distinctBytes.byteLength);
+    const benchStart = performance.now();
+    const preparedBench = preparePdfBytes(benchmark25Mb, 'benchmark-25mb.pdf');
+    checkPdfTailHeuristic(preparedBench.pdfBytes, 'benchmark-25mb.pdf');
+    const benchMs = performance.now() - benchStart;
+    assert.ok(benchMs < 500, `25 MB header+tail scan took too long: ${benchMs.toFixed(1)}ms`);
+    console.log(`25 MB worst-case header+tail scan completed in ${benchMs.toFixed(2)} ms.`);
+  }
+
   // Honest legacy facade check for planned ops
   const plannedPdfResult = await pdfProcessingService.processFiles(
     [new File(['%PDF-1.4'], 'report.pdf', {type: 'application/pdf'})],
@@ -1171,7 +1857,20 @@ async function run() {
   assert.ok(markup.includes('Download all as ZIP'));
   assert.ok(markup.includes('merged.pdf'));
   assert.ok(markup.includes(EN_COMMON_DICTIONARY.processing.interactiveFeaturesNote));
+  assert.ok(markup.includes(EN_COMMON_DICTIONARY.processing.visualVerificationAdvice));
   assert.equal(markup.includes('RAW_DEV_SECRET_STACK_TRACE'), false);
+
+  const secretReasonErrorMarkup = renderToStaticMarkup(
+    <LocaleProvider>
+      <ErrorPanel
+        error={createProcessingError('CORRUPT_PDF', '[reason:page-tree] INTERNAL_REASON_SHOULD_STAY_HIDDEN')}
+        onRetry={() => {}}
+      />
+    </LocaleProvider>
+  );
+  assert.ok(secretReasonErrorMarkup.includes(EN_COMMON_DICTIONARY.processingErrors.corruptPdf));
+  assert.equal(secretReasonErrorMarkup.includes('[reason:page-tree]'), false);
+  assert.equal(secretReasonErrorMarkup.includes('INTERNAL_REASON_SHOULD_STAY_HIDDEN'), false);
 
   // 14. SSR scan ALL pages & src/locales/en/common.ts for banned claims + live status counts
   const renderPage = (element: React.ReactElement, initialEntry = '/') =>
@@ -1186,7 +1885,7 @@ async function run() {
   const homeMarkup = renderPage(<HomePage />, '/');
   assert.equal((homeMarkup.match(/<h1\b/gi) ?? []).length, 1);
   assert.ok(homeMarkup.includes('8 tools planned'));
-  assert.ok(homeMarkup.includes('4 live'));
+  assert.ok(homeMarkup.includes('5 live'));
   assert.ok(homeMarkup.includes('Available'));
   assert.ok(homeMarkup.includes('Coming soon'));
 
@@ -1195,25 +1894,147 @@ async function run() {
     JSON.stringify(EN_COMMON_DICTIONARY)
   );
 
+  // 14b. Organize PDF SSR component checks (idle workspace, populated grid, 0-kept error, thumbnail fallback notices)
+  {
+    const organizeToolDef = getToolBySlug('organize-pdf')!;
+    const idleOrgHtml = renderToStaticMarkup(
+      <LocaleProvider>
+        <MemoryRouter>
+          <OrganizerWorkspace
+            tool={organizeToolDef}
+            validationRule={{
+              allowedExtensions: ['.pdf'],
+              allowedMimeTypes: ['application/pdf'],
+              maxFileSizeBytes: PROCESSING_LIMITS.maxFileSizeBytes,
+              maxFilesCount: 1,
+              allowMultiple: false,
+            }}
+          />
+        </MemoryRouter>
+      </LocaleProvider>
+    );
+    assert.ok(idleOrgHtml.includes('Select or drag PDF files here'));
+    assertNoBannedPhrases('SSR output (OrganizerWorkspace idle)', idleOrgHtml);
+
+    let sampleState = createInitialOrganizeState(3);
+    sampleState = organizeReducer(sampleState, {
+      type: 'ROTATE_PAGE',
+      sourcePageIndex: 1,
+      step: 90,
+    });
+    sampleState = organizeReducer(sampleState, {
+      type: 'TOGGLE_SELECT_PAGE',
+      sourcePageIndex: 0,
+    });
+    sampleState = organizeReducer(sampleState, {
+      type: 'TOGGLE_DELETE_PAGE',
+      sourcePageIndex: 2,
+    });
+
+    const populatedGridHtml = renderToStaticMarkup(
+      <LocaleProvider>
+        <OrganizeGridSection
+          state={sampleState}
+          thumbnails={{}}
+          noticeMode="lazy-large"
+          isLibraryLoading={false}
+          isRunning={false}
+          onDispatch={() => {}}
+          onRun={() => {}}
+        />
+      </LocaleProvider>
+    );
+    assert.ok(populatedGridHtml.includes('aria-label="Move page 2 earlier"'));
+    assert.ok(populatedGridHtml.includes('aria-label="Move page 2 later"'));
+    assert.ok(
+      populatedGridHtml.includes('aria-label="Rotate page 2 left 90 degrees"')
+    );
+    assert.ok(
+      populatedGridHtml.includes('aria-label="Rotate page 2 right 90 degrees"')
+    );
+    assert.ok(populatedGridHtml.includes('aria-label="Remove page 2"'));
+    assert.ok(populatedGridHtml.includes('aria-label="Restore page 3"'));
+    assert.ok(populatedGridHtml.includes('aria-label="Select page 1"'));
+    assert.ok(populatedGridHtml.includes('+90°'));
+    assert.ok(populatedGridHtml.includes(EN_COMMON_DICTIONARY.workspace.organize.largeDocNotice));
+    assertNoBannedPhrases('SSR output (OrganizeGridSection populated)', populatedGridHtml);
+
+    let zeroKeptState = createInitialOrganizeState(2);
+    zeroKeptState = organizeReducer(zeroKeptState, {type: 'SELECT_ALL_ACTIVE'});
+    zeroKeptState = organizeReducer(zeroKeptState, {type: 'DELETE_SELECTED'});
+    const zeroKeptGridHtml = renderToStaticMarkup(
+      <LocaleProvider>
+        <OrganizeGridSection
+          state={zeroKeptState}
+          thumbnails={{}}
+          noticeMode="hard-cap"
+          isLibraryLoading={false}
+          isRunning={false}
+          onDispatch={() => {}}
+          onRun={() => {}}
+        />
+      </LocaleProvider>
+    );
+    assert.ok(
+      zeroKeptGridHtml.includes(
+        EN_COMMON_DICTIONARY.workspace.organize.emptyResultError
+      )
+    );
+    assert.ok(
+      zeroKeptGridHtml.includes(
+        EN_COMMON_DICTIONARY.workspace.organize.hardCapNotice
+      )
+    );
+    assert.ok(/<button[^>]*disabled[^>]*>[\s\S]*?Save Organized PDF/.test(zeroKeptGridHtml));
+    assertNoBannedPhrases('SSR output (OrganizeGridSection zero-kept)', zeroKeptGridHtml);
+
+    const libFailedHtml = renderToStaticMarkup(
+      <LocaleProvider>
+        <OrganizeGridSection
+          state={createInitialOrganizeState(1)}
+          thumbnails={{}}
+          noticeMode="load-failed"
+          isLibraryLoading={false}
+          isRunning={false}
+          onDispatch={() => {}}
+          onRun={() => {}}
+        />
+      </LocaleProvider>
+    );
+    assert.ok(
+      libFailedHtml.includes(
+        EN_COMMON_DICTIONARY.workspace.organize.libraryFailedNotice
+      )
+    );
+    assertNoBannedPhrases('SSR output (OrganizeGridSection load-failed)', libFailedHtml);
+  }
+
   const pageSnapshots: Array<{name: string; html: string}> = [
     {name: 'HomePage', html: homeMarkup},
     {name: 'ToolsPage', html: renderPage(<ToolsPage />, '/tools')},
-    ...['merge-pdf', 'split-pdf', 'extract-pages', 'remove-pages', 'compress-pdf'].map(
-      (slug) => ({
-        name: `ToolLandingPage(${slug})`,
-        html: renderToStaticMarkup(
-          <LocaleProvider>
-            <ToastProvider>
-              <MemoryRouter initialEntries={[`/${slug}`]}>
-                <Routes>
-                  <Route path="/:slug" element={<ToolLandingPage />} />
-                </Routes>
-              </MemoryRouter>
-            </ToastProvider>
-          </LocaleProvider>
-        ),
-      })
-    ),
+    ...[
+      'merge-pdf',
+      'split-pdf',
+      'extract-pages',
+      'remove-pages',
+      'organize-pdf',
+      'compress-pdf',
+      'protect-pdf',
+      'unlock-pdf',
+    ].map((slug) => ({
+      name: `ToolLandingPage(${slug})`,
+      html: renderToStaticMarkup(
+        <LocaleProvider>
+          <ToastProvider>
+            <MemoryRouter initialEntries={[`/${slug}`]}>
+              <Routes>
+                <Route path="/:slug" element={<ToolLandingPage />} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </LocaleProvider>
+      ),
+    })),
     {name: 'AboutPage', html: renderPage(<AboutPage />, '/about')},
     {name: 'ContactPage', html: renderPage(<ContactPage />, '/contact')},
     {name: 'PrivacyPage', html: renderPage(<PrivacyPage />, '/privacy-policy')},
@@ -1227,9 +2048,20 @@ async function run() {
     assertNoBannedPhrases(`SSR output (${snapshot.name})`, snapshot.html);
   }
 
-  // Verify live tool pages include non-thin documentation sections and no Coming soon notice,
-  // while planned tool pages keep the Coming soon notice.
-  for (const liveSlug of ['merge-pdf', 'split-pdf', 'extract-pages', 'remove-pages']) {
+  // Verify live tool pages include non-thin documentation sections, visual advice limitation,
+  // and no Coming soon notice, while planned tool pages (including Security) stay clearly labeled Planned/Coming soon.
+  for (const liveSlug of [
+    'merge-pdf',
+    'split-pdf',
+    'extract-pages',
+    'remove-pages',
+    'organize-pdf',
+  ]) {
+    const rich = getToolRichContent(liveSlug);
+    assert.ok(
+      rich?.limitations.includes(EN_COMMON_DICTIONARY.processing.visualVerificationAdvice),
+      `${liveSlug} rich limitations missing visualVerificationAdvice`
+    );
     const snapshot = pageSnapshots.find(
       (s) => s.name === `ToolLandingPage(${liveSlug})`
     )!;
@@ -1240,13 +2072,19 @@ async function run() {
     );
     assert.ok(snapshot.html.includes('Browser Limits'));
     assert.ok(snapshot.html.includes('25.0 MB'));
+    assert.ok(snapshot.html.includes(EN_COMMON_DICTIONARY.processing.visualVerificationAdvice));
   }
-  const compressSnapshot = pageSnapshots.find(
-    (s) => s.name === 'ToolLandingPage(compress-pdf)'
-  )!;
-  assert.ok(
-    compressSnapshot.html.includes(EN_COMMON_DICTIONARY.toolLanding.foundationNoticeTitle)
-  );
+  for (const plannedSlug of ['compress-pdf', 'protect-pdf', 'unlock-pdf']) {
+    const plannedSnapshot = pageSnapshots.find(
+      (s) => s.name === `ToolLandingPage(${plannedSlug})`
+    )!;
+    assert.ok(
+      plannedSnapshot.html.includes(EN_COMMON_DICTIONARY.toolLanding.foundationNoticeTitle),
+      `${plannedSlug} must show planned notice`
+    );
+  }
+  assert.ok(homeMarkup.includes('Planned tools for password protection'));
+  assert.ok(pageSnapshots.find((s) => s.name === 'ToolsPage')!.html.includes('Planned:'));
 
   // 15. ToolsPage SSR & Footer checks
   const toolsQueryMarkup = renderPage(<ToolsPage />, '/tools?q=combine');
@@ -1359,7 +2197,7 @@ async function run() {
   }
 
   console.log(
-    'All Milestone 5A unit, real-PDF engine, integrity/truncation, ZIP, limit, SEO origin, cancel & SSR render checks passed.'
+    'All Milestone 5B unit, real-PDF engine, organize reducer/SSR, integrity/truncation, ZIP, limit, SEO origin, cancel & SSR render checks passed.'
   );
 }
 

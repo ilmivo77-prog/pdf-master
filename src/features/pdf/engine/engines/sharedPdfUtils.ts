@@ -8,12 +8,30 @@ import {
   PDFStream,
 } from 'pdf-lib';
 import {PROCESSING_LIMITS} from '../../../../config/processingLimits';
-import {isPdfSignatureValid} from '../../../../services/file/fileValidation';
+import {findPdfHeaderOffset} from '../../../../services/file/fileValidation';
 import {createProcessingError, mapPdfLibError} from '../errorTaxonomy';
 import type {PdfEngineInputFile} from '../types';
 
-const TAIL_EOF_WINDOW_BYTES = 1024;
-const TAIL_STARTXREF_WINDOW_BYTES = 2048;
+const STARTXREF_ASCII = [
+  0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66,
+] as const; // "startxref"
+const EOF_ASCII = [0x25, 0x25, 0x45, 0x4f, 0x46] as const; // "%%EOF"
+
+export interface PdfIntegrityResult {
+  pageCount: number;
+  warnings: string[];
+}
+
+export interface LoadedPdfResult {
+  doc: PDFDocument;
+  pageCount: number;
+  warnings: string[];
+}
+
+export interface PreparedPdfBytesResult {
+  pdfBytes: Uint8Array;
+  warnings: string[];
+}
 
 export function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) {
@@ -21,58 +39,142 @@ export function throwIfAborted(signal: AbortSignal): void {
   }
 }
 
-function decodeTailAsciiSlice(bytes: Uint8Array, windowBytes: number): string {
-  const start = Math.max(0, bytes.byteLength - windowBytes);
-  let out = '';
-  for (let i = start; i < bytes.byteLength; i += 1) {
-    out += String.fromCharCode(bytes[i]);
-  }
-  return out;
+function isPdfWhitespaceByte(byte: number): boolean {
+  return (
+    byte === 0x20 ||
+    byte === 0x09 ||
+    byte === 0x0a ||
+    byte === 0x0d ||
+    byte === 0x0c ||
+    byte === 0x00
+  );
 }
 
 /**
- * Heuristic tail integrity check for PDF files:
- * - Requires "%%EOF" within the trailing ~1024 bytes (allowing trailing whitespace/garbage).
- * - Requires a "startxref" marker near the end before the final "%%EOF".
- * Throws CORRUPT_PDF if either structural trailer marker is missing or out of order.
+ * Zero-allocation backward typed-array search for an ASCII byte pattern.
+ */
+function lastIndexOfAsciiPattern(
+  bytes: Uint8Array,
+  pattern: readonly number[],
+  endExclusive = bytes.byteLength,
+  minStart = 0
+): number {
+  const patLen = pattern.length;
+  if (patLen === 0 || endExclusive - minStart < patLen) {
+    return -1;
+  }
+
+  const lastIdx = patLen - 1;
+  const lastByte = pattern[lastIdx];
+  const firstStart = Math.max(0, minStart);
+  const maxStart = Math.min(bytes.byteLength - patLen, endExclusive - patLen);
+
+  for (let i = maxStart; i >= firstStart; i -= 1) {
+    if (bytes[i + lastIdx] !== lastByte) {
+      continue;
+    }
+    let matched = true;
+    for (let j = 0; j < lastIdx; j += 1) {
+      if (bytes[i + j] !== pattern[j]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Validates and normalizes leading bytes before "%PDF-" (accepted within first 1024 bytes).
+ */
+export function preparePdfBytes(
+  bytes: Uint8Array,
+  fileLabel = 'document'
+): PreparedPdfBytesResult {
+  const headerOffset = findPdfHeaderOffset(bytes);
+  if (headerOffset === -1) {
+    throw createProcessingError(
+      'NOT_A_PDF',
+      `[reason:header] File "${fileLabel}" has no %PDF-x.y header within the first 1024 bytes.`
+    );
+  }
+
+  if (headerOffset > 0) {
+    return {
+      pdfBytes: bytes.subarray(headerOffset),
+      warnings: [
+        `Skipped ${headerOffset} leading byte(s) before the %PDF- header in "${fileLabel}".`,
+      ],
+    };
+  }
+
+  return {
+    pdfBytes: bytes,
+    warnings: [],
+  };
+}
+
+/**
+ * Whole-buffer typed-array tail integrity check:
+ * - Searches backwards through the entire buffer for the LAST occurrence of "startxref".
+ * - Requires whitespace + numeric xref offset digits immediately following "startxref".
+ * - Requires "%%EOF" anywhere after that numeric offset (allowing arbitrary trailing bytes after %%EOF).
  */
 export function checkPdfTailHeuristic(
   bytes: Uint8Array,
   fileLabel = 'document'
 ): void {
   if (bytes.byteLength === 0) {
-    throw createProcessingError('INVALID_FILE', `File "${fileLabel}" is empty.`);
-  }
-
-  const eofWindowStart = Math.max(0, bytes.byteLength - TAIL_EOF_WINDOW_BYTES);
-  const eofTail = decodeTailAsciiSlice(bytes, TAIL_EOF_WINDOW_BYTES);
-  const localEofIdx = eofTail.lastIndexOf('%%EOF');
-  if (localEofIdx === -1) {
     throw createProcessingError(
-      'CORRUPT_PDF',
-      `Tail integrity heuristic failed for "${fileLabel}": missing %%EOF in final ${TAIL_EOF_WINDOW_BYTES} bytes.`
+      'INVALID_FILE',
+      `[reason:tail] File "${fileLabel}" is empty.`
     );
   }
 
-  const startxrefWindowStart = Math.max(
-    0,
-    bytes.byteLength - TAIL_STARTXREF_WINDOW_BYTES
+  const startxrefPos = lastIndexOfAsciiPattern(bytes, STARTXREF_ASCII);
+  if (startxrefPos === -1) {
+    throw createProcessingError(
+      'CORRUPT_PDF',
+      `[reason:tail] Tail check failed for "${fileLabel}": missing startxref marker.`
+    );
+  }
+
+  let cursor = startxrefPos + STARTXREF_ASCII.length;
+  while (cursor < bytes.byteLength && isPdfWhitespaceByte(bytes[cursor])) {
+    cursor += 1;
+  }
+
+  let digitCount = 0;
+  while (
+    cursor < bytes.byteLength &&
+    bytes[cursor] >= 0x30 &&
+    bytes[cursor] <= 0x39
+  ) {
+    digitCount += 1;
+    cursor += 1;
+  }
+
+  if (digitCount === 0) {
+    throw createProcessingError(
+      'CORRUPT_PDF',
+      `[reason:tail] Tail check failed for "${fileLabel}": missing numeric offset after final startxref.`
+    );
+  }
+
+  const eofPos = lastIndexOfAsciiPattern(
+    bytes,
+    EOF_ASCII,
+    bytes.byteLength,
+    cursor
   );
-  const startxrefTail = decodeTailAsciiSlice(bytes, TAIL_STARTXREF_WINDOW_BYTES);
-  const localStartxrefIdx = startxrefTail.lastIndexOf('startxref');
-  if (localStartxrefIdx === -1) {
+  if (eofPos === -1) {
     throw createProcessingError(
       'CORRUPT_PDF',
-      `Tail integrity heuristic failed for "${fileLabel}": missing startxref near end of file.`
-    );
-  }
-
-  const globalEofPos = eofWindowStart + localEofIdx;
-  const globalStartxrefPos = startxrefWindowStart + localStartxrefIdx;
-  if (globalEofPos <= globalStartxrefPos) {
-    throw createProcessingError(
-      'CORRUPT_PDF',
-      `Tail integrity heuristic failed for "${fileLabel}": startxref appears after %%EOF.`
+      `[reason:tail] Tail check failed for "${fileLabel}": missing %%EOF after final startxref.`
     );
   }
 }
@@ -81,7 +183,7 @@ function verifyPageTreeIntegrity(
   doc: PDFDocument,
   signal: AbortSignal,
   fileLabel: string
-): number {
+): PdfIntegrityResult {
   const catalogPagesRef = doc.catalog.get(PDFName.of('Pages'));
   const rootPages =
     catalogPagesRef instanceof PDFRef
@@ -91,18 +193,20 @@ function verifyPageTreeIntegrity(
   if (!(rootPages instanceof PDFDict)) {
     throw createProcessingError(
       'CORRUPT_PDF',
-      `Integrity check failed in "${fileLabel}": root /Pages dictionary is missing or invalid.`
+      `[reason:page-tree] Integrity check failed in "${fileLabel}": root /Pages dictionary is missing or invalid.`
     );
   }
 
   const visitedNodes = new Set<PDFDict>();
+  const warnings: string[] = [];
   let visitedCount = 0;
+  const resourcesKey = PDFName.of('Resources');
 
   function countAndVerifyNode(node: PDFDict): number {
     if (visitedNodes.has(node)) {
       throw createProcessingError(
         'CORRUPT_PDF',
-        `Integrity check failed in "${fileLabel}": cycle detected in /Pages tree.`
+        `[reason:page-tree] Integrity check failed in "${fileLabel}": cycle detected in /Pages tree.`
       );
     }
     visitedNodes.add(node);
@@ -110,6 +214,17 @@ function verifyPageTreeIntegrity(
     visitedCount += 1;
     if (visitedCount % 50 === 0) {
       throwIfAborted(signal);
+    }
+
+    const rawNodeResources = node.get(resourcesKey);
+    if (rawNodeResources instanceof PDFRef) {
+      const resolvedNodeResources = doc.context.lookup(rawNodeResources);
+      if (!(resolvedNodeResources instanceof PDFDict)) {
+        throw createProcessingError(
+          'CORRUPT_PDF',
+          `[reason:resources] Integrity check failed in "${fileLabel}": /Pages /Resources reference does not resolve to a dictionary.`
+        );
+      }
     }
 
     const typeObj = node.lookup(PDFName.of('Type'));
@@ -126,7 +241,7 @@ function verifyPageTreeIntegrity(
     if (!(kidsResolved instanceof PDFArray)) {
       throw createProcessingError(
         'CORRUPT_PDF',
-        `Integrity check failed in "${fileLabel}": /Pages node is missing a valid /Kids array.`
+        `[reason:page-tree] Integrity check failed in "${fileLabel}": /Pages node is missing a valid /Kids array.`
       );
     }
 
@@ -139,25 +254,24 @@ function verifyPageTreeIntegrity(
       if (!(kidResolved instanceof PDFDict)) {
         throw createProcessingError(
           'CORRUPT_PDF',
-          `Integrity check failed in "${fileLabel}": /Pages /Kids[${i}] reference is missing or invalid.`
+          `[reason:page-tree] Integrity check failed in "${fileLabel}": /Pages /Kids[${i}] reference is dangling or not a dictionary.`
         );
       }
       subtreeLeafCount += countAndVerifyNode(kidResolved);
     }
 
     const declaredCountObj = node.lookup(PDFName.of('Count'));
-    if (declaredCountObj !== undefined) {
-      if (!(declaredCountObj instanceof PDFNumber)) {
+    if (declaredCountObj instanceof PDFNumber) {
+      const declaredCount = declaredCountObj.asNumber();
+      if (declaredCount > 0 && subtreeLeafCount === 0) {
         throw createProcessingError(
           'CORRUPT_PDF',
-          `Integrity check failed in "${fileLabel}": /Pages node has an invalid /Count entry.`
+          `[reason:page-tree] Integrity check failed in "${fileLabel}": /Pages /Count declared ${declaredCount} page(s) but 0 reachable pages were found.`
         );
       }
-      const declaredCount = declaredCountObj.asNumber();
-      if (declaredCount !== subtreeLeafCount) {
-        throw createProcessingError(
-          'CORRUPT_PDF',
-          `Integrity check failed in "${fileLabel}": /Pages /Count (${declaredCount}) does not match resolved pages (${subtreeLeafCount}).`
+      if (node === rootPages && declaredCount !== subtreeLeafCount) {
+        warnings.push(
+          `Document /Pages /Count reported ${declaredCount} page(s), while ${subtreeLeafCount} reachable page(s) were found; using ${subtreeLeafCount}.`
         );
       }
     }
@@ -165,13 +279,14 @@ function verifyPageTreeIntegrity(
     return subtreeLeafCount;
   }
 
-  return countAndVerifyNode(rootPages);
+  const pageCount = countAndVerifyNode(rootPages);
+  return {pageCount, warnings};
 }
 
 /**
  * O(pages) structural integrity verification using pdf-lib context lookup:
- * - Verifies /Pages tree /Kids references and /Count consistency so pdf-lib's
- *   silent skipping of broken page refs cannot hide corrupt/missing pages.
+ * - Walks /Pages tree /Kids references (cycle-guarded) and counts actual reachable pages.
+ * - Accepts /Count mismatches with a non-blocking warning unless 0 pages are reachable when /Count > 0.
  * - Blank pages (no /Contents entry) are legal and accepted.
  * - When /Contents is present, resolves single stream ref or array of stream refs
  *   and requires every entry to exist and be a PDFStream.
@@ -182,13 +297,17 @@ export function verifyPdfPageIntegrity(
   doc: PDFDocument,
   signal: AbortSignal,
   fileLabel = 'document'
-): void {
-  const verifiedTreePageCount = verifyPageTreeIntegrity(doc, signal, fileLabel);
+): PdfIntegrityResult {
+  const {pageCount: verifiedTreePageCount, warnings} = verifyPageTreeIntegrity(
+    doc,
+    signal,
+    fileLabel
+  );
   const pages = doc.getPages();
   if (pages.length !== verifiedTreePageCount) {
     throw createProcessingError(
       'CORRUPT_PDF',
-      `Integrity check failed in "${fileLabel}": resolved page count (${pages.length}) differs from page tree (${verifiedTreePageCount}).`
+      `[reason:page-tree] Integrity check failed in "${fileLabel}": resolved page count (${pages.length}) differs from reachable page tree (${verifiedTreePageCount}).`
     );
   }
 
@@ -220,14 +339,14 @@ export function verifyPdfPageIntegrity(
           if (!(resolvedItem instanceof PDFStream)) {
             throw createProcessingError(
               'CORRUPT_PDF',
-              `Integrity check failed in "${fileLabel}": page ${i + 1} /Contents[${j}] is missing or not a stream.`
+              `[reason:contents] Integrity check failed in "${fileLabel}": page ${i + 1} /Contents[${j}] is missing or not a stream.`
             );
           }
         }
       } else {
         throw createProcessingError(
           'CORRUPT_PDF',
-          `Integrity check failed in "${fileLabel}": page ${i + 1} /Contents is missing or invalid.`
+          `[reason:contents] Integrity check failed in "${fileLabel}": page ${i + 1} /Contents is dangling or invalid.`
         );
       }
     }
@@ -238,45 +357,44 @@ export function verifyPdfPageIntegrity(
       if (!(resolvedResources instanceof PDFDict)) {
         throw createProcessingError(
           'CORRUPT_PDF',
-          `Integrity check failed in "${fileLabel}": page ${i + 1} /Resources reference does not resolve to a dictionary.`
+          `[reason:resources] Integrity check failed in "${fileLabel}": page ${i + 1} /Resources reference does not resolve to a dictionary.`
         );
       }
     }
   }
 
   throwIfAborted(signal);
+  return {pageCount: verifiedTreePageCount, warnings};
 }
 
 export async function loadUnencryptedPdf(
   file: PdfEngineInputFile,
   signal: AbortSignal
-): Promise<PDFDocument> {
+): Promise<LoadedPdfResult> {
   throwIfAborted(signal);
 
-  const bytes = new Uint8Array(file.bytes);
-  if (bytes.byteLength === 0) {
+  const rawBytes = new Uint8Array(file.bytes);
+  if (rawBytes.byteLength === 0) {
     throw createProcessingError('INVALID_FILE', `File "${file.name}" is empty.`);
   }
 
-  if (bytes.byteLength > PROCESSING_LIMITS.maxFileSizeBytes) {
+  if (rawBytes.byteLength > PROCESSING_LIMITS.maxFileSizeBytes) {
     throw createProcessingError(
       'FILE_TOO_LARGE',
-      `File "${file.name}" (${bytes.byteLength} bytes) exceeds limit (${PROCESSING_LIMITS.maxFileSizeBytes}).`
+      `File "${file.name}" (${rawBytes.byteLength} bytes) exceeds limit (${PROCESSING_LIMITS.maxFileSizeBytes}).`
     );
   }
 
-  if (!isPdfSignatureValid(bytes)) {
-    throw createProcessingError(
-      'NOT_A_PDF',
-      `File "${file.name}" does not start with a valid %PDF-x.y header.`
-    );
-  }
+  const {pdfBytes, warnings: headerWarnings} = preparePdfBytes(
+    rawBytes,
+    file.name
+  );
 
-  checkPdfTailHeuristic(bytes, file.name);
+  checkPdfTailHeuristic(pdfBytes, file.name);
 
   let doc: PDFDocument;
   try {
-    doc = await PDFDocument.load(bytes, {
+    doc = await PDFDocument.load(pdfBytes, {
       ignoreEncryption: false,
       updateMetadata: false,
     });
@@ -291,13 +409,18 @@ export async function loadUnencryptedPdf(
     );
   }
 
+  let integrity: PdfIntegrityResult;
   try {
-    verifyPdfPageIntegrity(doc, signal, file.name);
+    integrity = verifyPdfPageIntegrity(doc, signal, file.name);
   } catch (err) {
     throw mapPdfLibError(err);
   }
 
-  return doc;
+  return {
+    doc,
+    pageCount: integrity.pageCount,
+    warnings: [...headerWarnings, ...integrity.warnings],
+  };
 }
 
 /**
@@ -319,8 +442,17 @@ export async function verifySavedPdfOutput(
       ignoreEncryption: false,
       updateMetadata: false,
     });
-    assertExpectedPageCount(reloadedDoc, expectedPageCount, operationLabel);
-    verifyPdfPageIntegrity(reloadedDoc, signal, operationLabel);
+    const {pageCount: actualReachableCount} = verifyPdfPageIntegrity(
+      reloadedDoc,
+      signal,
+      operationLabel
+    );
+    if (actualReachableCount !== expectedPageCount) {
+      throw createProcessingError(
+        'CORRUPT_PDF',
+        `[reason:page-tree] ${operationLabel} page count assertion failed: expected ${expectedPageCount}, got ${actualReachableCount}.`
+      );
+    }
   } catch (err) {
     throw mapPdfLibError(err);
   } finally {
@@ -408,7 +540,7 @@ export function assertExpectedPageCount(
   if (actualCount !== expectedCount) {
     throw createProcessingError(
       'CORRUPT_PDF',
-      `${operationLabel} page count assertion failed: expected ${expectedCount}, got ${actualCount}.`
+      `[reason:page-tree] ${operationLabel} page count assertion failed: expected ${expectedCount}, got ${actualCount}.`
     );
   }
 }

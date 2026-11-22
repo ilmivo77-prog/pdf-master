@@ -216,6 +216,37 @@ export interface TranslationDictionary {
       removeAllError: string;
       runButton: string;
     };
+    organize: {
+      heading: string;
+      helperText: string;
+      selectAllButton: string;
+      clearSelectionButton: string;
+      rotateSelectedLeftButton: string;
+      rotateSelectedRightButton: string;
+      deleteSelectedButton: string;
+      restoreAllButton: string;
+      reverseOrderButton: string;
+      resetOrderButton: string;
+      summaryKeptSingular: string;
+      summaryKeptPlural: string;
+      summaryRemovedLabel: string;
+      summarySelectedLabel: string;
+      emptyResultError: string;
+      largeDocNotice: string;
+      hardCapNotice: string;
+      libraryFailedNotice: string;
+      thumbnailsLoadingNotice: string;
+      pageLabel: string;
+      removedBadge: string;
+      selectPageLabel: string;
+      moveEarlierLabel: string;
+      moveLaterLabel: string;
+      rotateLeftLabel: string;
+      rotateRightLabel: string;
+      deletePageLabel: string;
+      restorePageLabel: string;
+      runButton: string;
+    };
     pageRangeErrors: {
       EMPTY_INPUT: string;
       INPUT_TOO_LONG: string;
@@ -256,6 +287,7 @@ export interface TranslationDictionary {
     metadataProducerLabel: string;
     noOutputsNotice: string;
     interactiveFeaturesNote: string;
+    visualVerificationAdvice: string;
   };
   processingErrors: {
     invalidFile: string;

@@ -26,6 +26,8 @@ export interface StartJobParams {
   options?: Record<string, unknown>;
   limits?: Partial<ProcessingLimitsConfig>;
   requirePdfMagicBytes?: boolean;
+  /** Optional pre-read buffers; sliced before worker transfer so caller copies are not detached. */
+  preloadedBuffers?: ArrayBuffer[];
 }
 
 function generateJobId(): string {
@@ -184,9 +186,10 @@ export function useProcessingJob() {
 
       dispatch({type: 'QUEUE'});
 
-      // Read full file bytes lazily only right before worker dispatch
+      // Read full file bytes lazily unless caller supplied a preloaded buffer (copy sliced before transfer)
       const engineInputs: PdfEngineInputFile[] = [];
-      for (const file of params.files) {
+      for (let idx = 0; idx < params.files.length; idx += 1) {
+        const file = params.files[idx];
         if (abortController.signal.aborted) {
           dispatch({
             type: 'CANCEL',
@@ -195,7 +198,10 @@ export function useProcessingJob() {
           return;
         }
         const meta = buildSafeFileMetadata(file);
-        const bytes = await file.arrayBuffer();
+        const preloaded = params.preloadedBuffers?.[idx];
+        const bytes = preloaded
+          ? preloaded.slice(0)
+          : await file.arrayBuffer();
         engineInputs.push({
           name: meta.sanitizedName,
           mimeType: meta.mimeType,

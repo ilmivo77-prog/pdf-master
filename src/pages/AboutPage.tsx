@@ -59,7 +59,7 @@ export function AboutPage() {
               Current Stage: Browser PDF Organization Release
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Four browser-based PDF organization tools—Merge PDF, Split PDF, Extract Pages, and Remove Pages—now run inside a local Web Worker without sending files to any server. Additional optimization, conversion, editing, and OCR tools remain marked Coming soon while their engines are developed.
+              Browser-based PDF organization tools—Merge PDF, Split PDF, Organize PDF, Extract Pages, and Remove Pages—now run inside a local Web Worker without sending files to any server. Additional optimization, conversion, editing, and OCR tools remain marked Coming soon while their engines are developed.
             </p>
             <div className="mt-5">
               <Link

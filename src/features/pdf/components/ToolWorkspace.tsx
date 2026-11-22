@@ -31,6 +31,7 @@ import type {FileValidationRule, ManagedFileItem} from '../../../types/file';
 import type {PdfToolDefinition} from '../../../types/tool';
 import {
   PdfWorkerClient,
+  createProcessingError,
   type ProcessingError,
   type ProcessingErrorMessageKey,
 } from '../engine';
@@ -92,8 +93,12 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
   const runButtonRef = useRef<HTMLButtonElement>(null);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
   const errorPanelRef = useRef<HTMLDivElement>(null);
+  const batchLimitAlertRef = useRef<HTMLDivElement>(null);
+  const firstQueueErrorRef = useRef<HTMLParagraphElement>(null);
   const userInitiatedJobRef = useRef(false);
   const prevJobStatusRef = useRef(job.status);
+  const prevInspectErrorCountRef = useRef(0);
+  const prevHasBatchLimitErrorRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -113,16 +118,12 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
     }
 
     if (prevStatus !== 'succeeded' && job.status === 'succeeded') {
-      requestAnimationFrame(() => {
-        resultHeadingRef.current?.focus();
-      });
+      resultHeadingRef.current?.focus();
     } else if (
       prevStatus !== job.status &&
       (job.status === 'failed' || job.status === 'cancelled')
     ) {
-      requestAnimationFrame(() => {
-        errorPanelRef.current?.focus();
-      });
+      errorPanelRef.current?.focus();
     }
   }, [job.status]);
 
@@ -334,6 +335,30 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
       }
     );
   }, [items, tool.id]);
+
+  const firstInspectErrorIndex = items.findIndex(
+    (item) => item.inspectState === 'error'
+  );
+  const inspectErrorCount = items.filter(
+    (item) => item.inspectState === 'error'
+  ).length;
+
+  useEffect(() => {
+    const prevCount = prevInspectErrorCountRef.current;
+    prevInspectErrorCountRef.current = inspectErrorCount;
+    if (inspectErrorCount > prevCount) {
+      firstQueueErrorRef.current?.focus();
+    }
+  }, [inspectErrorCount]);
+
+  useEffect(() => {
+    const hasBatchError = Boolean(batchLimitError);
+    const prevHasBatchError = prevHasBatchLimitErrorRef.current;
+    prevHasBatchLimitErrorRef.current = hasBatchError;
+    if (!prevHasBatchError && hasBatchError) {
+      batchLimitAlertRef.current?.focus();
+    }
+  }, [batchLimitError]);
 
   const singlePageCount =
     readyItems.length === 1 ? (readyItems[0].pageCount ?? 0) : 0;
@@ -568,17 +593,23 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
       </p>
 
       {batchLimitError && (
-        <Alert variant="danger">
-          {
-            t.processingErrors[
-              batchLimitError.code === 'TOO_MANY_FILES'
-                ? 'tooManyFiles'
-                : batchLimitError.code === 'FILE_TOO_LARGE'
-                  ? 'fileTooLarge'
-                  : 'invalidFile'
-            ]
-          }
-        </Alert>
+        <div
+          ref={batchLimitAlertRef}
+          tabIndex={-1}
+          className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+        >
+          <Alert variant="danger">
+            {
+              t.processingErrors[
+                batchLimitError.code === 'TOO_MANY_FILES'
+                  ? 'tooManyFiles'
+                  : batchLimitError.code === 'FILE_TOO_LARGE'
+                    ? 'fileTooLarge'
+                    : 'invalidFile'
+              ]
+            }
+          </Alert>
+        </div>
       )}
 
       {items.length > 0 && (
@@ -642,7 +673,11 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
                       </div>
 
                       {item.inspectState === 'error' && (
-                        <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-red-700">
+                        <p
+                          ref={index === firstInspectErrorIndex ? firstQueueErrorRef : undefined}
+                          tabIndex={index === firstInspectErrorIndex ? -1 : undefined}
+                          className="mt-1 flex items-center gap-1.5 rounded-sm text-xs font-medium text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+                        >
                           <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                           <span>
                             {item.errorMessageKey
@@ -943,9 +978,15 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
         />
       )}
 
-      {(job.status === 'failed' || job.status === 'cancelled') && job.error && (
+      {(job.status === 'failed' || job.status === 'cancelled') && (
         <ErrorPanel
-          error={job.error}
+          error={
+            job.error ??
+            createProcessingError(
+              job.status === 'cancelled' ? 'CANCELLED' : 'UNKNOWN',
+              'Job ended without an error payload.'
+            )
+          }
           panelRef={errorPanelRef}
           onRetry={handleRetry}
         />

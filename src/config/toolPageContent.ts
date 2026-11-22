@@ -13,6 +13,7 @@ export interface ToolRichContent {
 }
 
 const INTERACTIVE_NOTE = EN_COMMON_DICTIONARY.processing.interactiveFeaturesNote;
+const VISUAL_ADVICE_NOTE = EN_COMMON_DICTIONARY.processing.visualVerificationAdvice;
 
 export function getToolRichContent(toolId: string): ToolRichContent | null {
   const maxFileSize = formatBytes(PROCESSING_LIMITS.maxFileSizeBytes);
@@ -56,6 +57,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         ],
         limitations: [
           INTERACTIVE_NOTE,
+          VISUAL_ADVICE_NOTE,
           'PDFs with encryption or permission restrictions are rejected; PDF Master does not unlock restricted files.',
           `Browser worker limits (${maxFileSize} per file, ${maxTotalSize} total, ${maxFiles} files max) are conservative and large documents may fail on low-memory phones.`,
         ],
@@ -129,6 +131,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         ],
         limitations: [
           INTERACTIVE_NOTE,
+          VISUAL_ADVICE_NOTE,
           `Split output count is capped at ${maxSplitOutputs} files per job to keep browser worker memory stable.`,
           'PDFs with encryption or permission restrictions cannot be split; remove those restrictions in your PDF viewer first.',
         ],
@@ -194,6 +197,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         ],
         limitations: [
           INTERACTIVE_NOTE,
+          VISUAL_ADVICE_NOTE,
           'Only valid 1-based ASCII numbers, hyphens, and commas are accepted.',
           `Files larger than ${maxFileSize} or PDFs with encryption or permission restrictions are rejected.`,
         ],
@@ -253,6 +257,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         ],
         limitations: [
           INTERACTIVE_NOTE,
+          VISUAL_ADVICE_NOTE,
           'You cannot remove every page from a PDF; at least one page must remain.',
           `Browser worker memory limits (${maxFileSize} max) apply and PDFs with encryption or permission restrictions are rejected.`,
         ],
@@ -274,6 +279,84 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
             title: 'Are pages uploaded anywhere during removal?',
             content:
               'No. Processing executes inside your browser Web Worker and outputs stay only in session memory. When loading the web app itself, the hosting provider may keep standard server logs such as IP address and requested URL.',
+          },
+        ],
+      };
+
+    case 'organize-pdf':
+      return {
+        overview:
+          'Organize PDF lets you inspect page thumbnails in your browser, move pages earlier or later with keyboard buttons or drag-and-drop, rotate individual or selected pages in 90-degree increments, and mark unwanted pages for removal before writing one updated PDF inside a Web Worker.',
+        steps: [
+          {
+            title: 'Select one unrestricted PDF',
+            description: `Choose a single PDF up to ${maxFileSize}. Structure and encryption checks run in the background worker before page thumbnails render.`,
+          },
+          {
+            title: 'Reorder, rotate, or remove pages',
+            description:
+              'Move cards earlier or later, rotate left or right by 90 degrees, or use selection checkboxes for bulk rotation and deletion.',
+          },
+          {
+            title: 'Review kept and removed counts',
+            description:
+              'Check the live page summary and restore any mistakenly removed pages before generating the output file.',
+          },
+          {
+            title: 'Save and inspect the organized PDF',
+            description:
+              'Click Save Organized PDF to build the finished file in browser memory, download it, and verify the visual layout in your PDF viewer.',
+          },
+        ],
+        acceptedInputsSummary: `Single unrestricted PDF (.pdf) up to ${maxFileSize}. Outputs one organized PDF (.pdf) containing at least 1 page.`,
+        optionsExplained: [
+          {
+            name: 'Page order (arrows and drag-and-drop)',
+            detail:
+              'Reorders output pages without changing your source file. Every card includes keyboard-accessible Move earlier and Move later buttons alongside optional desktop drag-and-drop.',
+          },
+          {
+            name: 'Page rotation (90°, 180°, 270°)',
+            detail:
+              'Applies cumulative 90-degree rotations on top of each page’s existing or inherited /Rotate value modulo 360.',
+          },
+          {
+            name: 'Remove and restore pages',
+            detail:
+              'Pages marked for removal stay visible and dimmed until you save so you can restore individual pages or Restore all at any point.',
+          },
+        ],
+        limitations: [
+          INTERACTIVE_NOTE,
+          VISUAL_ADVICE_NOTE,
+          'PDFs with encryption or permission restrictions are rejected; PDF Master does not unlock restricted files.',
+          'Page thumbnails are preview images generated inside your browser using pdf.js and may differ slightly from how your desktop PDF viewer renders complex fonts or layers.',
+          `To protect device memory, documents over ${PROCESSING_LIMITS.organizeThumbnailLazyThreshold} pages render thumbnails only as cards scroll into view, and documents over ${PROCESSING_LIMITS.organizeThumbnailHardCap} pages organize by page number without thumbnails; very large or dense documents may still fail on low-memory phones (up to ${maxFileSize} per file).`,
+        ],
+        faqs: [
+          {
+            id: 'organize-thumbnails',
+            title: 'How are page thumbnails generated?',
+            content:
+              'After the PDF passes local signature and structure validation, the third-party open-source pdf.js library loads lazily on this page and renders small thumbnail previews locally in your browser using self-hosted helper assets.',
+          },
+          {
+            id: 'organize-no-thumbnails',
+            title: 'Can I still organize a PDF if thumbnails are disabled or fail to render?',
+            content:
+              'Yes. If a document exceeds the thumbnail page limit or if thumbnail rendering fails on a complex page, every card continues showing its original page number and rotation badge so you can reorder, rotate, and delete pages.',
+          },
+          {
+            id: 'organize-rotation',
+            title: 'How does rotation work if a page is already rotated?',
+            content:
+              'Organize PDF reads each page’s existing rotation angle (including rotation inherited from parent page nodes) and adds your chosen 90-degree adjustments modulo 360 when writing the output PDF.',
+          },
+          {
+            id: 'organize-privacy',
+            title: 'Are my PDF pages sent to a server while organizing?',
+            content:
+              'No. Both thumbnail previewing (via pdf.js) and final PDF assembly (via the browser Web Worker) execute inside your browser session without sending file bytes to a server by PDF Master. When loading the site, the hosting provider may keep standard server logs such as IP address and requested URL.',
           },
         ],
       };

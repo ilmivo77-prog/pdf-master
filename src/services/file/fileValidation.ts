@@ -39,7 +39,9 @@ export function extractFileExtension(fileName: string): string {
 
 export type MagicByteFileKind = 'pdf' | 'jpeg' | 'png' | 'unknown';
 
+export const PDF_HEADER_SEARCH_WINDOW_BYTES = 1024;
 const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d] as const; // %PDF-
+const PDF_MIN_HEADER_BYTES = 8; // %PDF-x.y
 const JPEG_MAGIC = [0xff, 0xd8, 0xff] as const;
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 
@@ -60,11 +62,31 @@ function matchesBytesAt(
 }
 
 /**
+ * Searches the first 1024 bytes for "%PDF-" (with at least 8 bytes "%PDF-x.y" available
+ * from the match offset), returning the byte offset or -1 if not found.
+ */
+export function findPdfHeaderOffset(bytes: Uint8Array): number {
+  if (bytes.length < PDF_MIN_HEADER_BYTES) {
+    return -1;
+  }
+  const maxStartOffset = Math.min(
+    bytes.length - PDF_MIN_HEADER_BYTES,
+    PDF_HEADER_SEARCH_WINDOW_BYTES - PDF_MAGIC.length
+  );
+  for (let offset = 0; offset <= maxStartOffset; offset += 1) {
+    if (matchesBytesAt(bytes, PDF_MAGIC, offset)) {
+      return offset;
+    }
+  }
+  return -1;
+}
+
+/**
  * Inspects file header bytes rather than trusting extension or MIME type.
- * For PDF, requires at least 8 bytes (%PDF-x.y header) so truncated headers fail.
+ * For PDF, accepts "%PDF-" anywhere within the first 1024 bytes (per PDF spec).
  */
 export function detectMagicByteKind(bytes: Uint8Array): MagicByteFileKind {
-  if (bytes.length >= 8 && matchesBytesAt(bytes, PDF_MAGIC, 0)) {
+  if (findPdfHeaderOffset(bytes) !== -1) {
     return 'pdf';
   }
   if (matchesBytesAt(bytes, JPEG_MAGIC, 0)) {
@@ -81,7 +103,8 @@ export function isPdfSignatureValid(bytes: Uint8Array): boolean {
 }
 
 /**
- * Reads only the leading 16 bytes lazily so whole files are not loaded at selection time.
+ * Reads only the leading 1032 bytes lazily so whole files are not loaded at selection time
+ * while still supporting %PDF- headers anywhere inside the first 1024 bytes.
  */
 export async function sniffFileSignature(
   file: File
@@ -89,7 +112,10 @@ export async function sniffFileSignature(
   if (file.size === 0) {
     return 'unknown';
   }
-  const headerSlice = file.slice(0, 16);
+  const headerSlice = file.slice(
+    0,
+    PDF_HEADER_SEARCH_WINDOW_BYTES + PDF_MIN_HEADER_BYTES
+  );
   const buffer = await headerSlice.arrayBuffer();
   return detectMagicByteKind(new Uint8Array(buffer));
 }

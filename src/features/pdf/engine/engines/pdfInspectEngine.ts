@@ -1,6 +1,5 @@
 import {PDFDocument} from 'pdf-lib';
 import {buildOutputFileName} from '../../../../services/file/downloadManager';
-import {isPdfSignatureValid} from '../../../../services/file/fileValidation';
 import {createProcessingError, mapPdfLibError} from '../errorTaxonomy';
 import type {
   PdfEngine,
@@ -11,6 +10,7 @@ import type {
 } from '../types';
 import {
   checkPdfTailHeuristic,
+  preparePdfBytes,
   throwIfAborted,
   verifyPdfPageIntegrity,
   verifySavedPdfOutput,
@@ -63,9 +63,9 @@ export const pdfInspectEngine: PdfEngine = {
     }
 
     const file = input[0];
-    const bytes = new Uint8Array(file.bytes);
+    const rawBytes = new Uint8Array(file.bytes);
 
-    if (bytes.byteLength === 0) {
+    if (rawBytes.byteLength === 0) {
       throw createProcessingError('INVALID_FILE', `File "${file.name}" is empty.`);
     }
 
@@ -75,14 +75,12 @@ export const pdfInspectEngine: PdfEngine = {
       stageLabel: 'Verifying PDF header',
     });
 
-    if (!isPdfSignatureValid(bytes)) {
-      throw createProcessingError(
-        'NOT_A_PDF',
-        `File "${file.name}" does not start with a valid %PDF-x.y signature.`
-      );
-    }
+    const {pdfBytes, warnings: headerWarnings} = preparePdfBytes(
+      rawBytes,
+      file.name
+    );
 
-    checkPdfTailHeuristic(bytes, file.name);
+    checkPdfTailHeuristic(pdfBytes, file.name);
     throwIfAborted(ctx.signal);
 
     ctx.onProgress({
@@ -93,10 +91,10 @@ export const pdfInspectEngine: PdfEngine = {
 
     let pdfDoc: PDFDocument;
     let isEncrypted = false;
-    const warnings: string[] = [];
+    const warnings: string[] = [...headerWarnings];
 
     try {
-      pdfDoc = await PDFDocument.load(bytes, {
+      pdfDoc = await PDFDocument.load(pdfBytes, {
         ignoreEncryption: false,
         updateMetadata: false,
       });
@@ -108,7 +106,7 @@ export const pdfInspectEngine: PdfEngine = {
           throw mapped;
         }
         try {
-          pdfDoc = await PDFDocument.load(bytes, {
+          pdfDoc = await PDFDocument.load(pdfBytes, {
             ignoreEncryption: true,
             updateMetadata: false,
           });
@@ -135,8 +133,9 @@ export const pdfInspectEngine: PdfEngine = {
     let pageCount: number;
     let metadata: PdfInspectionMetadata = {};
     try {
-      pageCount = pdfDoc.getPageCount();
-      verifyPdfPageIntegrity(pdfDoc, ctx.signal, file.name);
+      const integrity = verifyPdfPageIntegrity(pdfDoc, ctx.signal, file.name);
+      pageCount = integrity.pageCount;
+      warnings.push(...integrity.warnings);
       if (!isEncrypted) {
         metadata = readCleanMetadata(pdfDoc);
       }
@@ -157,7 +156,7 @@ export const pdfInspectEngine: PdfEngine = {
         stats: {
           durationMs: Math.max(0, Date.now() - startedAt),
           inputFileCount: 1,
-          inputTotalBytes: bytes.byteLength,
+          inputTotalBytes: rawBytes.byteLength,
           outputFileCount: 0,
           outputTotalBytes: 0,
           pageCount,
@@ -197,7 +196,7 @@ export const pdfInspectEngine: PdfEngine = {
       stats: {
         durationMs: Math.max(0, Date.now() - startedAt),
         inputFileCount: 1,
-        inputTotalBytes: bytes.byteLength,
+        inputTotalBytes: rawBytes.byteLength,
         outputFileCount: 1,
         outputTotalBytes: savedBytes.byteLength,
         pageCount,
