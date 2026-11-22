@@ -19,6 +19,7 @@ import {
   detectInteractiveFeatures,
   loadUnencryptedPdf,
   throwIfAborted,
+  verifySavedPdfOutput,
 } from './sharedPdfUtils';
 
 export type SplitMode = 'ranges' | 'every-n' | 'every-page';
@@ -204,6 +205,13 @@ export const pdfSplitEngine: PdfEngine = {
 
         assertExpectedPageCount(outDoc, group.pages.length, `Split part ${i + 1}`);
         const outBytes = await outDoc.save({useObjectStreams: true});
+        outDoc = null;
+        await verifySavedPdfOutput(
+          outBytes,
+          group.pages.length,
+          `Split part ${i + 1}`,
+          ctx.signal
+        );
         outputs.push({
           name: outputNames[i],
           mimeType: 'application/pdf',
@@ -215,8 +223,6 @@ export const pdfSplitEngine: PdfEngine = {
         srcDoc = null;
         throw mapPdfLibError(err);
       }
-
-      outDoc = null;
     }
 
     // Release source PDF before optional ZIP compression

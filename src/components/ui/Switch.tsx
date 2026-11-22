@@ -33,7 +33,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
           <label
             htmlFor={resolvedId}
             className={cn(
-              'min-w-0 flex-1 cursor-pointer select-none',
+              'flex min-h-[44px] min-w-0 flex-1 cursor-pointer flex-col justify-center select-none',
               disabled && 'cursor-not-allowed opacity-60'
             )}
           >
@@ -58,21 +58,25 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
           aria-checked={checked}
           disabled={disabled}
           onClick={() => onCheckedChange(!checked)}
-          className={cn(
-            'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50',
-            checked ? 'bg-blue-700' : 'bg-slate-300'
-          )}
+          className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="sr-only">{label ?? 'Toggle switch'}</span>
           <span
             aria-hidden="true"
             className={cn(
-              'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-150',
-              checked
-                ? 'translate-x-5 rtl:-translate-x-5'
-                : 'translate-x-0'
+              'relative inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors duration-150',
+              checked ? 'bg-blue-700' : 'bg-slate-300'
             )}
-          />
+          >
+            <span
+              className={cn(
+                'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-150',
+                checked
+                  ? 'translate-x-5 rtl:-translate-x-5'
+                  : 'translate-x-0'
+              )}
+            />
+          </span>
         </button>
       </div>
     );

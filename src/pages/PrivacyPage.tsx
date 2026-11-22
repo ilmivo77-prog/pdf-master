@@ -37,7 +37,7 @@ export function PrivacyPage() {
               2. Personal Data &amp; Analytics
             </h2>
             <p className="mt-2">
-              In the current release, {SITE_CONFIG.brandName} has no user accounts, login forms, backend database storage, third-party analytics scripts, or tracking cookies. Fonts are self-hosted with the application bundle rather than fetched from external font servers.
+              In the current release, {SITE_CONFIG.brandName} has no user accounts, login forms, backend database storage, third-party analytics scripts, or tracking cookies. Fonts are self-hosted with the application bundle rather than fetched from external font servers. When delivering the application files, the hosting provider may keep standard server logs such as IP address and requested URL.
             </p>
           </div>
 

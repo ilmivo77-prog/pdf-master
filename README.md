@@ -1,20 +1,22 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# PDF Master
 
-# Run and deploy your AI Studio app
+Browser-first PDF utility platform built with React, TypeScript, Tailwind CSS, Vite, and client-side Web Workers (`pdf-lib` and `jszip`).
 
-This contains everything you need to run your app locally.
+## Development & Build
 
-View your app in AI Studio: https://ai.studio/apps/5e2d8fdf-f7c5-4a83-9db3-cf1a4d42e437
+```bash
+npm install
+npm run lint
+npm run build
+npx tsx src/tests/runChecks.tsx
+```
 
-## Run Locally
+### Environment Variables
 
-**Prerequisites:**  Node.js
+See `.env.example`:
+- `VITE_SITE_URL` — Site origin used for canonical links, `og:url`, `hreflang`, and JSON-LD URLs (trailing slashes are normalized automatically). Configure the real value in your hosting provider's environment variables and never commit real domains (`.env.example` uses `VITE_SITE_URL=https://YOUR-PROJECT.vercel.app` strictly as a placeholder). When unset, the app falls back to `window.location.origin` in the browser.
 
+### Lockfile & Platform Dependencies Note
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+On Linux and macOS, `npm ci` performs a clean install from `package-lock.json`.
+On Windows, use `npm install` instead if `npm ci` reports missing optional platform packages for native/rollup dependencies. Do not use `--legacy-peer-deps`.

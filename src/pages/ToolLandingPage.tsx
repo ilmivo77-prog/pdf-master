@@ -12,6 +12,7 @@ import {
 } from '../config/toolsRegistry';
 import {FileDropzone} from '../features/pdf/components/FileDropzone';
 import {formatBytes} from '../services/file/fileValidation';
+import {buildCanonicalUrl} from '../services/seo/seoService';
 import type {FileValidationRule} from '../types/file';
 import {NotFoundPage} from './NotFoundPage';
 
@@ -83,6 +84,7 @@ export function ToolLandingPage() {
       '@context': 'https://schema.org',
       '@type': 'WebApplication',
       name: `${tool.name} – ${SITE_CONFIG.brandName}`,
+      url: buildCanonicalUrl(tool.route),
       applicationCategory: 'UtilitiesApplication',
       operatingSystem: 'All',
       description: tool.seoDescription,
@@ -131,7 +133,14 @@ export function ToolLandingPage() {
           isPlanned ? (
             <FileDropzone toolName={tool.name} validationRule={validationRule} />
           ) : (
-            <Suspense fallback={<Skeleton variant="rect" className="h-64 w-full" />}>
+            <Suspense
+              fallback={
+                <div aria-busy="true" className="space-y-4">
+                  <Skeleton variant="rect" className="h-[310px] sm:h-[288px] w-full rounded-2xl" />
+                  <Skeleton variant="text" className="h-4 w-3/4" />
+                </div>
+              }
+            >
               <ToolWorkspace tool={tool} validationRule={validationRule} />
             </Suspense>
           )

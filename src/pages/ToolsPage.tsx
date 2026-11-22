@@ -170,7 +170,7 @@ export function ToolsPage() {
               type="button"
               aria-pressed={validCategoryFilter === 'all'}
               onClick={() => handleCategoryChange('all')}
-              className={`min-h-[44px] rounded-lg px-3.5 py-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
+              className={`min-h-[44px] min-w-[44px] rounded-lg px-3.5 py-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
                 validCategoryFilter === 'all'
                   ? 'bg-blue-700 text-white'
                   : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
@@ -185,7 +185,7 @@ export function ToolsPage() {
                 type="button"
                 aria-pressed={validCategoryFilter === category.id}
                 onClick={() => handleCategoryChange(category.id)}
-                className={`min-h-[44px] rounded-lg px-3.5 py-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
+                className={`min-h-[44px] min-w-[44px] rounded-lg px-3.5 py-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
                   validCategoryFilter === category.id
                     ? 'bg-blue-700 text-white'
                     : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'

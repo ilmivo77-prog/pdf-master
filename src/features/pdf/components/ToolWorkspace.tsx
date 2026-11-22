@@ -88,6 +88,13 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
   const inspectAbortRef = useRef<AbortController | null>(null);
   const isInspectingLoopRef = useRef(false);
 
+  const dropzoneSelectButtonRef = useRef<HTMLButtonElement>(null);
+  const runButtonRef = useRef<HTMLButtonElement>(null);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  const errorPanelRef = useRef<HTMLDivElement>(null);
+  const userInitiatedJobRef = useRef(false);
+  const prevJobStatusRef = useRef(job.status);
+
   useEffect(() => {
     return () => {
       inspectAbortRef.current?.abort();
@@ -96,6 +103,28 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
       inspectClientRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const prevStatus = prevJobStatusRef.current;
+    prevJobStatusRef.current = job.status;
+
+    if (!userInitiatedJobRef.current) {
+      return;
+    }
+
+    if (prevStatus !== 'succeeded' && job.status === 'succeeded') {
+      requestAnimationFrame(() => {
+        resultHeadingRef.current?.focus();
+      });
+    } else if (
+      prevStatus !== job.status &&
+      (job.status === 'failed' || job.status === 'cancelled')
+    ) {
+      requestAnimationFrame(() => {
+        errorPanelRef.current?.focus();
+      });
+    }
+  }, [job.status]);
 
   const inspectNextPending = useCallback(async (currentItems: WorkspaceFileItem[]) => {
     if (isInspectingLoopRef.current) {
@@ -272,9 +301,13 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
   };
 
   const handleStartOver = () => {
+    userInitiatedJobRef.current = false;
     inspectAbortRef.current?.abort();
     discardResults();
     setItems([]);
+    requestAnimationFrame(() => {
+      dropzoneSelectButtonRef.current?.focus();
+    });
   };
 
   const isInspectingAny = items.some(
@@ -470,6 +503,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
       return;
     }
 
+    userInitiatedJobRef.current = true;
     const files = items.map((item) => item.managed.file);
     let options: Record<string, unknown> = {};
 
@@ -499,6 +533,18 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
     });
   };
 
+  const handleRetry = () => {
+    userInitiatedJobRef.current = false;
+    discardResults();
+    requestAnimationFrame(() => {
+      if (readyItems.length > 0 && runButtonRef.current && !runButtonRef.current.disabled) {
+        runButtonRef.current.focus();
+      } else {
+        dropzoneSelectButtonRef.current?.focus();
+      }
+    });
+  };
+
   const formatPagesBadge = (count: number) =>
     `${count} ${
       count === 1 ? t.workspace.pagesUnitSingular : t.workspace.pagesUnitPlural
@@ -514,6 +560,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
         disabled={isRunning}
         hideQueue
         isLiveTool
+        selectButtonRef={dropzoneSelectButtonRef}
       />
 
       <p className="text-xs text-slate-500">
@@ -663,6 +710,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 <Button
+                  ref={runButtonRef}
                   variant="primary"
                   size="lg"
                   disabled={!canRun}
@@ -770,6 +818,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
               )}
 
               <Button
+                ref={runButtonRef}
                 variant="primary"
                 size="lg"
                 disabled={!canRun}
@@ -816,6 +865,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
               )}
 
               <Button
+                ref={runButtonRef}
                 variant="primary"
                 size="lg"
                 disabled={!canRun}
@@ -864,6 +914,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
               )}
 
               <Button
+                ref={runButtonRef}
                 variant="primary"
                 size="lg"
                 disabled={!canRun}
@@ -886,6 +937,7 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
       {job.status === 'succeeded' && job.result && (
         <ResultPanel
           result={job.result}
+          headingRef={resultHeadingRef}
           onDiscard={handleStartOver}
           discardLabel={t.processing.startOverButton}
         />
@@ -894,7 +946,8 @@ export function ToolWorkspace({tool, validationRule}: ToolWorkspaceProps) {
       {(job.status === 'failed' || job.status === 'cancelled') && job.error && (
         <ErrorPanel
           error={job.error}
-          onRetry={canRun ? handleRun : undefined}
+          panelRef={errorPanelRef}
+          onRetry={handleRetry}
         />
       )}
     </div>

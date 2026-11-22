@@ -25,6 +25,7 @@ interface FileDropzoneProps {
   controlledFiles?: ManagedFileItem[];
   hideQueue?: boolean;
   isLiveTool?: boolean;
+  selectButtonRef?: React.Ref<HTMLButtonElement>;
   onFilesChange?: (files: ManagedFileItem[]) => void;
 }
 
@@ -36,6 +37,7 @@ export function FileDropzone({
   controlledFiles,
   hideQueue = false,
   isLiveTool = false,
+  selectButtonRef,
   onFilesChange,
 }: FileDropzoneProps) {
   const {t} = useTranslation();
@@ -193,6 +195,7 @@ export function FileDropzone({
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button
+            ref={selectButtonRef}
             variant="primary"
             disabled={disabled}
             onClick={openFilePicker}

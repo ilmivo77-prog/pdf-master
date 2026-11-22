@@ -28,7 +28,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         steps: [
           {
             title: 'Select 2 or more PDF files',
-            description: `Choose between 2 and ${maxFiles} non-password-protected PDF documents (up to ${maxFileSize} each and ${maxTotalSize} combined).`,
+            description: `Choose between 2 and ${maxFiles} unrestricted PDF documents (up to ${maxFileSize} each and ${maxTotalSize} combined).`,
           },
           {
             title: 'Verify page counts',
@@ -46,7 +46,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
               'Click Merge PDFs to assemble merged.pdf in session memory, download the result, and discard session memory when finished.',
           },
         ],
-        acceptedInputsSummary: `Standard non-password-protected PDF (.pdf) documents only. Accepts 2 to ${maxFiles} files per run, up to ${maxFileSize} per file and ${maxTotalSize} total combined payload.`,
+        acceptedInputsSummary: `Standard unrestricted PDF (.pdf) documents only. Accepts 2 to ${maxFiles} files per run, up to ${maxFileSize} per file and ${maxTotalSize} total combined payload.`,
         optionsExplained: [
           {
             name: 'Move up / Move down ordering',
@@ -56,7 +56,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         ],
         limitations: [
           INTERACTIVE_NOTE,
-          'Password-protected PDFs are rejected rather than unlocked or bypassed.',
+          'PDFs with encryption or permission restrictions are rejected; PDF Master does not unlock restricted files.',
           `Browser worker limits (${maxFileSize} per file, ${maxTotalSize} total, ${maxFiles} files max) are conservative and large documents may fail on low-memory phones.`,
         ],
         faqs: [
@@ -75,13 +75,13 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
             id: 'merge-privacy',
             title: 'Where does PDF merging happen?',
             content:
-              'Merging runs inside your browser’s own Web Worker code. Files are not sent to a server by PDF Master, and merged.pdf exists only in browser session memory until you download or discard it.',
+              'Merging runs inside your browser’s own Web Worker code. Files are not sent to a server by PDF Master, and merged.pdf exists only in browser session memory until you download or discard it. When delivering the site, the hosting provider may keep standard server logs such as IP address and requested URL.',
           },
           {
             id: 'merge-locked',
-            title: 'Why are password-protected PDFs rejected?',
+            title: 'Why are protected or restricted PDFs rejected?',
             content:
-              'Merge PDF requires non-password-protected PDF structures so pages can be copied cleanly. Password-protected documents are rejected automatically during inspection.',
+              'PDF Master requires PDF files without encryption or permission restrictions so pages can be copied cleanly. Remove those restrictions in your PDF viewer first.',
           },
         ],
       };
@@ -93,7 +93,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         steps: [
           {
             title: 'Choose one PDF file',
-            description: `Select a single non-password-protected PDF up to ${maxFileSize}.`,
+            description: `Select a single unrestricted PDF up to ${maxFileSize}.`,
           },
           {
             title: 'Select a split mode',
@@ -110,7 +110,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
               'Download the single PDF directly if 1 group was specified, or download individual PDFs or the ZIP bundle when multiple files are created.',
           },
         ],
-        acceptedInputsSummary: `Single non-password-protected PDF (.pdf) up to ${maxFileSize}. Output is capped at ${maxSplitOutputs} split PDF files per run.`,
+        acceptedInputsSummary: `Single unrestricted PDF (.pdf) up to ${maxFileSize}. Output is capped at ${maxSplitOutputs} split PDF files per run.`,
         optionsExplained: [
           {
             name: 'Custom page ranges',
@@ -130,7 +130,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         limitations: [
           INTERACTIVE_NOTE,
           `Split output count is capped at ${maxSplitOutputs} files per job to keep browser worker memory stable.`,
-          'Password-protected PDFs cannot be split.',
+          'PDFs with encryption or permission restrictions cannot be split; remove those restrictions in your PDF viewer first.',
         ],
         faqs: [
           {
@@ -154,7 +154,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
             id: 'split-privacy',
             title: 'Are split files stored on a server?',
             content:
-              'No. Splitting runs inside your browser Web Worker and outputs remain only in browser memory for your active session.',
+              'No. Splitting runs inside your browser Web Worker and outputs remain only in browser memory for your active session. When loading the web page itself, the hosting provider may keep standard server logs such as IP address and requested URL.',
           },
         ],
       };
@@ -162,11 +162,11 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
     case 'extract-pages':
       return {
         overview:
-          'Extract Pages pulls only the specific pages or ranges you specify from a non-password-protected PDF and writes them into one new PDF document in the exact sequence you listed, omitting duplicate mentions automatically.',
+          'Extract Pages pulls only the specific pages or ranges you specify from an unrestricted PDF and writes them into one new PDF document in the exact sequence you listed, omitting duplicate mentions automatically.',
         steps: [
           {
             title: 'Add a PDF document',
-            description: `Select one non-password-protected PDF up to ${maxFileSize}.`,
+            description: `Select one unrestricted PDF up to ${maxFileSize}.`,
           },
           {
             title: 'Enter pages to extract',
@@ -184,7 +184,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
               'Download the generated document containing only your chosen pages in order.',
           },
         ],
-        acceptedInputsSummary: `Single non-password-protected PDF (.pdf) up to ${maxFileSize}. Outputs one new PDF (.pdf).`,
+        acceptedInputsSummary: `Single unrestricted PDF (.pdf) up to ${maxFileSize}. Outputs one new PDF (.pdf).`,
         optionsExplained: [
           {
             name: 'Pages to extract (order preserved)',
@@ -195,7 +195,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         limitations: [
           INTERACTIVE_NOTE,
           'Only valid 1-based ASCII numbers, hyphens, and commas are accepted.',
-          `Files larger than ${maxFileSize} or password-protected PDFs are rejected.`,
+          `Files larger than ${maxFileSize} or PDFs with encryption or permission restrictions are rejected.`,
         ],
         faqs: [
           {
@@ -213,7 +213,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
           {
             id: 'extract-limits',
             title: 'What limits apply to Extract Pages?',
-            content: `Each input PDF must be non-password-protected and at most ${maxFileSize}. Browser memory limits are conservative and very dense documents may fail on low-memory phones.`,
+            content: `Each input PDF must be free of encryption and permission restrictions and at most ${maxFileSize}. Browser memory limits are conservative and very dense documents may fail on low-memory phones.`,
           },
         ],
       };
@@ -225,7 +225,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         steps: [
           {
             title: 'Select a PDF document',
-            description: `Choose one non-password-protected PDF file up to ${maxFileSize}.`,
+            description: `Choose one unrestricted PDF file up to ${maxFileSize}.`,
           },
           {
             title: 'Specify pages to remove',
@@ -243,7 +243,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
               'Click Remove Pages to create and download the updated PDF.',
           },
         ],
-        acceptedInputsSummary: `Single non-password-protected PDF (.pdf) up to ${maxFileSize}. Outputs one trimmed PDF (.pdf) with at least 1 page.`,
+        acceptedInputsSummary: `Single unrestricted PDF (.pdf) up to ${maxFileSize}. Outputs one trimmed PDF (.pdf) with at least 1 page.`,
         optionsExplained: [
           {
             name: 'Pages to delete',
@@ -254,7 +254,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
         limitations: [
           INTERACTIVE_NOTE,
           'You cannot remove every page from a PDF; at least one page must remain.',
-          `Browser worker memory limits (${maxFileSize} max) apply and password-protected PDFs are rejected.`,
+          `Browser worker memory limits (${maxFileSize} max) apply and PDFs with encryption or permission restrictions are rejected.`,
         ],
         faqs: [
           {
@@ -273,7 +273,7 @@ export function getToolRichContent(toolId: string): ToolRichContent | null {
             id: 'remove-privacy',
             title: 'Are pages uploaded anywhere during removal?',
             content:
-              'No. Processing executes inside your browser Web Worker and outputs stay only in session memory.',
+              'No. Processing executes inside your browser Web Worker and outputs stay only in session memory. When loading the web app itself, the hosting provider may keep standard server logs such as IP address and requested URL.',
           },
         ],
       };

@@ -4,38 +4,129 @@ import {getToolRoutesForSitemap} from '../../config/toolsRegistry';
 import type {HreflangEntry, SeoMetadata} from '../../types/seo';
 import {buildLocalizedPath} from '../localization/i18nService';
 
-export function resolveBaseOrigin(): string {
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
+let hasWarnedMissingSiteUrl = false;
+
+export interface ResolveBaseOriginOptions {
+  envSiteUrl?: string;
+  isDev?: boolean;
+  windowOrigin?: string;
+  onWarn?: (message: string) => void;
+}
+
+export function normalizeSiteOrigin(rawUrl: string | undefined | null): string {
+  if (typeof rawUrl !== 'string') {
+    return '';
   }
-  return SITE_CONFIG.baseUrlFallback;
+  const trimmed = rawUrl.trim().replace(/\/+$/, '');
+  if (!trimmed) {
+    return '';
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.origin.replace(/\/+$/, '');
+    }
+  } catch {
+    // Non-URL origin override: return trimmed without trailing slashes
+  }
+  return trimmed;
 }
 
-export function buildCanonicalUrl(path: string): string {
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${resolveBaseOrigin()}${normalized}`;
+function getBuildEnv(): {siteUrl?: string; isDev: boolean} {
+  if (typeof import.meta === 'undefined') {
+    return {isDev: false};
+  }
+  const env = (
+    import.meta as unknown as {env?: {VITE_SITE_URL?: string; DEV?: boolean}}
+  ).env;
+  return {
+    siteUrl: typeof env?.VITE_SITE_URL === 'string' ? env.VITE_SITE_URL : undefined,
+    isDev: Boolean(env?.DEV),
+  };
 }
 
-export function buildHreflangAlternates(cleanPath: string): HreflangEntry[] {
-  const origin = resolveBaseOrigin();
+export function resolveBaseOrigin(options?: ResolveBaseOriginOptions): string {
+  const buildEnv = getBuildEnv();
+  const configuredRaw =
+    options && 'envSiteUrl' in options ? options.envSiteUrl : buildEnv.siteUrl;
+  const configuredOrigin = normalizeSiteOrigin(configuredRaw);
+
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  const isDev =
+    options && 'isDev' in options ? Boolean(options.isDev) : buildEnv.isDev;
+
+  const allowDevWarningInBuild =
+    typeof import.meta !== 'undefined' &&
+    typeof (import.meta as unknown as {env?: {DEV?: boolean}}).env !== 'undefined'
+      ? import.meta.env.DEV
+      : true;
+
+  if (allowDevWarningInBuild && isDev) {
+    const warningMessage =
+      '[PDF Master] VITE_SITE_URL is not set; falling back to browser origin for canonical, og:url, hreflang, and JSON-LD URLs.';
+    if (options?.onWarn) {
+      options.onWarn(warningMessage);
+    } else if (!hasWarnedMissingSiteUrl) {
+      hasWarnedMissingSiteUrl = true;
+      console.warn(warningMessage);
+    }
+  }
+
+  if (options && 'windowOrigin' in options) {
+    return normalizeSiteOrigin(options.windowOrigin);
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return normalizeSiteOrigin(window.location.origin);
+  }
+
+  return '';
+}
+
+export function normalizeCanonicalPath(path: string): string {
+  const trimmed = path.trim() || '/';
+  if (trimmed === '/') {
+    return '/';
+  }
+  const normalized = `/${trimmed.replace(/^\/+/, '').replace(/\/+$/, '')}`;
+  return normalized || '/';
+}
+
+export function buildCanonicalUrl(
+  path: string,
+  originOptions?: ResolveBaseOriginOptions
+): string {
+  const normalizedPath = normalizeCanonicalPath(path);
+  return `${resolveBaseOrigin(originOptions)}${normalizedPath}`;
+}
+
+export function buildHreflangAlternates(
+  cleanPath: string,
+  originOptions?: ResolveBaseOriginOptions
+): HreflangEntry[] {
+  const origin = resolveBaseOrigin(originOptions);
+  const normalizedClean = normalizeCanonicalPath(cleanPath);
   const entries: HreflangEntry[] = ACTIVE_LOCALE_CODES.map((code) => ({
     hrefLang: code,
-    href: `${origin}${buildLocalizedPath(cleanPath, code, code !== DEFAULT_LOCALE)}`,
+    href: `${origin}${buildLocalizedPath(normalizedClean, code, code !== DEFAULT_LOCALE)}`,
   }));
 
   entries.push({
     hrefLang: 'x-default',
-    href: `${origin}${buildLocalizedPath(cleanPath, DEFAULT_LOCALE, false)}`,
+    href: `${origin}${buildLocalizedPath(normalizedClean, DEFAULT_LOCALE, false)}`,
   });
 
   return entries;
 }
 
-export function generateSitemapEntries() {
-  const origin = resolveBaseOrigin();
+export function generateSitemapEntries(originOptions?: ResolveBaseOriginOptions) {
+  const origin = resolveBaseOrigin(originOptions);
   return getToolRoutesForSitemap().map((entry) => ({
     ...entry,
-    loc: `${origin}${entry.path}`,
+    loc: `${origin}${normalizeCanonicalPath(entry.path)}`,
   }));
 }
 

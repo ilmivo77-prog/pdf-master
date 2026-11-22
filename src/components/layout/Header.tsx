@@ -19,7 +19,7 @@ export function Header() {
 
   const navLinkClass = ({isActive}: {isActive: boolean}) =>
     cn(
-      'whitespace-nowrap shrink-0 text-sm font-medium transition-colors duration-150 hover:underline underline-offset-4',
+      'inline-flex min-h-[44px] items-center px-1.5 whitespace-nowrap shrink-0 text-sm font-medium transition-colors duration-150 hover:underline underline-offset-4',
       isActive ? 'text-blue-700' : 'text-slate-600 hover:text-slate-900'
     );
 
@@ -34,17 +34,17 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
       <Container size="wide" className="h-full">
-        <div className="flex h-full items-center justify-between gap-8">
+        <div className="flex h-full min-w-0 items-center justify-between gap-2 sm:gap-4 lg:gap-6">
           <Link
             to={buildPath(STATIC_ROUTES.home)}
-            className="inline-flex items-center whitespace-nowrap shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center px-1 -ms-1 whitespace-nowrap shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           >
             <PdfMasterLogo size="md" />
           </Link>
 
           <nav
             aria-label="Primary navigation"
-            className="hidden md:flex items-center gap-6"
+            className="hidden md:flex min-w-0 items-center gap-2 lg:gap-5"
           >
             <NavLink to={buildPath(STATIC_ROUTES.home)} end className={navLinkClass}>
               {t.nav.home}
@@ -54,7 +54,7 @@ export function Header() {
             </NavLink>
             <Link
               to={`${buildPath(STATIC_ROUTES.home)}#categories`}
-              className="whitespace-nowrap shrink-0 text-sm font-medium text-slate-600 transition-colors duration-150 hover:text-slate-900 hover:underline underline-offset-4"
+              className="inline-flex min-h-[44px] items-center px-1.5 whitespace-nowrap shrink-0 text-sm font-medium text-slate-600 transition-colors duration-150 hover:text-slate-900 hover:underline underline-offset-4"
             >
               {t.nav.categories}
             </Link>
@@ -66,12 +66,12 @@ export function Header() {
             </NavLink>
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <LanguageSelector />
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
+            <LanguageSelector compactOnNarrow />
 
             <Link
               to={buildPath(STATIC_ROUTES.tools)}
-              className="hidden sm:inline-flex min-h-[40px] items-center justify-center rounded-lg bg-blue-700 px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 active:bg-blue-900 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="hidden sm:inline-flex md:hidden lg:inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-blue-700 px-3.5 lg:px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 active:bg-blue-900 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
             >
               {t.nav.exploreToolsCta}
             </Link>

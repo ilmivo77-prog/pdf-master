@@ -80,7 +80,7 @@ export function Alert({
             type="button"
             onClick={onDismiss}
             aria-label={dismissLabel}
-            className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-black/5 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 shrink-0"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-black/5 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 shrink-0"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>

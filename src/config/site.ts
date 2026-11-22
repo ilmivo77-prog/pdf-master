@@ -4,7 +4,6 @@ export const SITE_CONFIG = {
   description:
     'A free-first, comprehensive online PDF utility platform to merge, split, compress, convert, edit, and manage PDF files.',
   defaultLocale: 'en' as const,
-  baseUrlFallback: 'https://pdfmaster.example',
   copyrightYear: 2026,
   defaultMaxFileSizeBytes: 25 * 1024 * 1024,
   defaultMaxFilesCount: 10,

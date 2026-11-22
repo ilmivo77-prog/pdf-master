@@ -130,7 +130,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
         id: 'file-handling',
         question: 'How are my files handled right now?',
         answer:
-          'For the four available tools, files are processed inside your browser by the page’s own code and are not sent to a server by PDF Master. Results exist only in browser memory for your current session. Planned tools only run local validation checks.',
+          'For the four available tools, files are processed inside your browser by the page’s own code and are not sent to a server by PDF Master. Results exist only in browser memory for your current session. Planned tools only run local validation checks. When serving the site, the hosting provider may keep standard server logs such as IP address and requested URL.',
       },
       {
         id: 'languages',
@@ -215,7 +215,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
       heading: '1. Order PDF Files to Merge',
       helperText:
         'Files will be combined from top to bottom. Use Move up or Move down to arrange the final page order.',
-      minFilesWarning: 'Select at least 2 valid, non-password-protected PDF files to merge.',
+      minFilesWarning: 'Select at least 2 valid, unrestricted PDF files to merge.',
       runButton: 'Merge PDFs',
     },
     split: {
@@ -299,7 +299,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     warningsHeading: 'Notices',
     statsHeading: 'Document Summary',
     pagesLabel: 'Pages',
-    protectedLabel: 'Password protected',
+    protectedLabel: 'Protected or restricted',
     protectedYes: 'Yes',
     protectedNo: 'No',
     metadataTitleLabel: 'Title',
@@ -314,9 +314,9 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     notAPdf:
       'This file does not appear to be a valid PDF document (missing %PDF- header).',
     passwordProtectedPdf:
-      'This PDF is password-protected and cannot be modified without unlocking it first.',
+      'This PDF uses encryption or permission restrictions, so PDF Master cannot process it yet. Remove the encryption or restrictions in your PDF viewer first.',
     corruptPdf:
-      'The PDF structure could not be parsed. The file may be damaged or incomplete.',
+      'The PDF structure appears damaged, truncated, or incomplete and cannot be processed.',
     fileTooLarge:
       'The selected file or batch exceeds the browser memory limit for this operation.',
     tooManyFiles:

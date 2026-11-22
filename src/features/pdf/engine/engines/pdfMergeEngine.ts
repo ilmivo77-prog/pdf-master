@@ -17,6 +17,7 @@ import {
   detectInteractiveFeatures,
   loadUnencryptedPdf,
   throwIfAborted,
+  verifySavedPdfOutput,
 } from './sharedPdfUtils';
 
 export const pdfMergeEngine: PdfEngine = {
@@ -48,7 +49,7 @@ export const pdfMergeEngine: PdfEngine = {
     }
 
     const totalInputBytes = input.reduce((sum, file) => sum + file.size, 0);
-    const mergedDoc = await PDFDocument.create();
+    let mergedDoc: PDFDocument | null = await PDFDocument.create();
     let expectedTotalPages = 0;
     let interactiveFeaturesDetected = false;
 
@@ -72,6 +73,7 @@ export const pdfMergeEngine: PdfEngine = {
         pageCount = srcDoc.getPageCount();
       } catch (err) {
         srcDoc = null;
+        mergedDoc = null;
         throw mapPdfLibError(err);
       }
 
@@ -106,6 +108,7 @@ export const pdfMergeEngine: PdfEngine = {
         );
       } catch (err) {
         srcDoc = null;
+        mergedDoc = null;
         throw mapPdfLibError(err);
       }
 
@@ -126,10 +129,24 @@ export const pdfMergeEngine: PdfEngine = {
     try {
       mergedBytes = await mergedDoc.save({useObjectStreams: true});
     } catch (err) {
+      mergedDoc = null;
       throw mapPdfLibError(err);
     }
 
-    throwIfAborted(ctx.signal);
+    mergedDoc = null;
+
+    ctx.onProgress({
+      mode: 'determinate',
+      percent: 96,
+      stageLabel: 'Verifying merged PDF',
+    });
+
+    await verifySavedPdfOutput(
+      mergedBytes,
+      expectedTotalPages,
+      'Merge PDF output',
+      ctx.signal
+    );
 
     ctx.onProgress({
       mode: 'determinate',

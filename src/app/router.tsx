@@ -66,10 +66,26 @@ function ScrollManager() {
 
 function PageLoadingFallback() {
   return (
-    <div className="mx-auto max-w-6xl space-y-4 px-4 py-16 sm:px-6 lg:px-8">
-      <Skeleton variant="text" className="h-8 w-56" />
-      <Skeleton variant="text" className="h-4 w-80" />
-      <Skeleton variant="rect" className="mt-6 h-48" />
+    <div
+      aria-busy="true"
+      className="min-h-[calc(100vh-4rem)] border-b border-slate-200 bg-slate-50"
+    >
+      <div className="border-b border-slate-200 bg-white py-12 sm:py-16">
+        <div className="mx-auto max-w-6xl space-y-4 px-4 sm:px-6 lg:px-8">
+          <Skeleton variant="text" className="h-4 w-32" />
+          <Skeleton variant="text" className="h-10 w-72 sm:w-96" />
+          <Skeleton variant="text" className="h-5 w-full max-w-xl" />
+        </div>
+      </div>
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
+        <Skeleton variant="rect" className="h-64 w-full rounded-2xl" />
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Skeleton variant="rect" className="h-36 rounded-xl" />
+          <Skeleton variant="rect" className="h-36 rounded-xl" />
+          <Skeleton variant="rect" className="h-36 rounded-xl" />
+          <Skeleton variant="rect" className="h-36 rounded-xl" />
+        </div>
+      </div>
     </div>
   );
 }

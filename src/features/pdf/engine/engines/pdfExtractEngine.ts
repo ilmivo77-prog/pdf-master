@@ -18,6 +18,7 @@ import {
   detectInteractiveFeatures,
   loadUnencryptedPdf,
   throwIfAborted,
+  verifySavedPdfOutput,
 } from './sharedPdfUtils';
 
 export const pdfExtractEngine: PdfEngine = {
@@ -83,7 +84,7 @@ export const pdfExtractEngine: PdfEngine = {
       zeroBasedIndices
     );
 
-    const outDoc = await PDFDocument.create();
+    let outDoc: PDFDocument | null = await PDFDocument.create();
     try {
       await copyPagesInChunks(
         outDoc,
@@ -101,6 +102,7 @@ export const pdfExtractEngine: PdfEngine = {
       );
     } catch (err) {
       srcDoc = null;
+      outDoc = null;
       throw mapPdfLibError(err);
     }
 
@@ -118,10 +120,18 @@ export const pdfExtractEngine: PdfEngine = {
     try {
       outBytes = await outDoc.save({useObjectStreams: true});
     } catch (err) {
+      outDoc = null;
       throw mapPdfLibError(err);
     }
 
-    throwIfAborted(ctx.signal);
+    outDoc = null;
+
+    await verifySavedPdfOutput(
+      outBytes,
+      orderedPages.length,
+      'Extract Pages output',
+      ctx.signal
+    );
 
     ctx.onProgress({
       mode: 'determinate',

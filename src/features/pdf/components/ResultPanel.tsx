@@ -1,3 +1,4 @@
+import React from 'react';
 import {Archive, Download, FileText, Trash2} from 'lucide-react';
 import {Alert, Button, Card} from '../../../components/ui';
 import {triggerOutputDownload} from '../../../services/file/downloadManager';
@@ -10,6 +11,7 @@ export interface ResultPanelProps {
   onDiscard: () => void;
   onDownload?: (output: OutputFile) => void;
   discardLabel?: string;
+  headingRef?: React.Ref<HTMLHeadingElement>;
   className?: string;
 }
 
@@ -18,6 +20,7 @@ export function ResultPanel({
   onDiscard,
   onDownload,
   discardLabel,
+  headingRef,
   className,
 }: ResultPanelProps) {
   const {t} = useTranslation();
@@ -38,7 +41,11 @@ export function ResultPanel({
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className="rounded-sm text-base font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+            >
               {t.processing.statsHeading}
             </h2>
             <p className="mt-0.5 font-mono text-xs tabular-nums text-slate-500">

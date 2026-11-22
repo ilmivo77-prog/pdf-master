@@ -57,7 +57,7 @@ export function ToolPageLayout({
       <section className="border-b border-slate-200 bg-white py-10 sm:py-12">
         <Container size="standard">
           <Breadcrumbs
-            className="mb-6"
+            className="mb-3"
             items={[
               {label: t.toolLanding.breadcrumbHome, to: buildPath(STATIC_ROUTES.home)},
               {label: t.toolLanding.breadcrumbTools, to: buildPath(STATIC_ROUTES.tools)},
@@ -231,7 +231,7 @@ export function ToolPageLayout({
               </h2>
               <Link
                 to={buildPath(STATIC_ROUTES.tools)}
-                className="text-sm font-semibold text-blue-700 hover:text-blue-800 whitespace-nowrap shrink-0"
+                className="inline-flex min-h-[44px] items-center rounded-md px-1 text-sm font-semibold text-blue-700 hover:text-blue-800 whitespace-nowrap shrink-0"
               >
                 {t.toolLanding.backToDirectory} &rarr;
               </Link>

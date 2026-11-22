@@ -5,9 +5,13 @@ import {useTranslation} from '../../services/localization/i18nService';
 
 interface LanguageSelectorProps {
   dropDirection?: 'down' | 'up';
+  compactOnNarrow?: boolean;
 }
 
-export function LanguageSelector({dropDirection = 'down'}: LanguageSelectorProps) {
+export function LanguageSelector({
+  dropDirection = 'down',
+  compactOnNarrow = false,
+}: LanguageSelectorProps) {
   const {localeConfig, t} = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,10 +53,17 @@ export function LanguageSelector({dropDirection = 'down'}: LanguageSelectorProps
     return (
       <span
         aria-label={`${t.nav.languageLabel}: ${localeConfig.nativeName}`}
-        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 whitespace-nowrap shrink-0"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 lg:px-3 py-1.5 text-xs font-medium text-slate-700 whitespace-nowrap shrink-0"
       >
-        <Globe className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
-        <span>{localeConfig.nativeName}</span>
+        <Globe className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+        {compactOnNarrow ? (
+          <>
+            <span className="hidden lg:inline">{localeConfig.nativeName}</span>
+            <span className="lg:hidden">{localeConfig.code.toUpperCase()}</span>
+          </>
+        ) : (
+          <span>{localeConfig.nativeName}</span>
+        )}
       </span>
     );
   }

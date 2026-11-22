@@ -116,7 +116,7 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     executionMode: 'client',
     seoTitle: 'Merge PDF Files in Your Browser – PDF Master',
     seoDescription:
-      'Combine 2 to 10 non-password-protected PDF documents into one ordered PDF directly in your browser using PDF Master.',
+      'Combine 2 to 10 unrestricted PDF documents into one ordered PDF directly in your browser using PDF Master.',
     keywords: ['merge pdf', 'combine', 'combine pdf', 'join', 'join pdf files', 'append'],
     isFeatured: true,
     featured: true,
@@ -191,7 +191,7 @@ export const PDF_TOOLS_REGISTRY: PdfToolDefinition[] = [
     executionMode: 'client',
     seoTitle: 'Remove Pages from PDF in Your Browser – PDF Master',
     seoDescription:
-      'Delete specific pages or ranges from a non-password-protected PDF directly inside your browser using PDF Master.',
+      'Delete specific pages or ranges from an unrestricted PDF directly inside your browser using PDF Master.',
     keywords: ['remove pages', 'delete pages', 'drop pages', 'delete pdf pages', 'trim pdf'],
     isFeatured: false,
     featured: false,

@@ -20,11 +20,11 @@ export function Breadcrumbs({
 }: BreadcrumbsProps) {
   return (
     <nav aria-label={ariaLabel} className={cn('text-xs text-slate-600', className)}>
-      <ol className="flex flex-wrap items-center gap-1.5">
+      <ol className="flex flex-wrap items-center gap-1">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (
-            <li key={`${item.label}-${index}`} className="inline-flex items-center gap-1.5">
+            <li key={`${item.label}-${index}`} className="inline-flex items-center gap-1">
               {index > 0 && (
                 <ChevronRight
                   aria-hidden="true"
@@ -34,14 +34,17 @@ export function Breadcrumbs({
               {item.to && !isLast ? (
                 <Link
                   to={item.to}
-                  className="transition-colors hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center sm:justify-start rounded-md px-2 transition-colors hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
                   aria-current={isLast ? 'page' : undefined}
-                  className={cn(isLast ? 'font-medium text-slate-900' : undefined)}
+                  className={cn(
+                    'inline-flex min-h-[44px] items-center px-1',
+                    isLast ? 'font-medium text-slate-900' : undefined
+                  )}
                 >
                   {item.label}
                 </span>

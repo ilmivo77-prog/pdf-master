@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
-import {PDFDocument, PDFName, StandardFonts} from 'pdf-lib';
+import {PDFArray, PDFDocument, PDFName, PDFNumber, PDFRef, StandardFonts} from 'pdf-lib';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemoryRouter, Route, Routes} from 'react-router-dom';
 import {PdfMasterLogo} from '../components/brand/PdfMasterLogo';
 import {Footer} from '../components/layout/Footer';
+import {Header} from '../components/layout/Header';
 import {
   Accordion,
   Alert,
@@ -16,6 +17,7 @@ import {
   Pagination,
   ProgressBar,
   Spinner,
+  Switch,
   ToastProvider,
 } from '../components/ui';
 import {
@@ -50,6 +52,10 @@ import {pdfInspectEngine} from '../features/pdf/engine/engines/pdfInspectEngine'
 import {pdfMergeEngine} from '../features/pdf/engine/engines/pdfMergeEngine';
 import {pdfRemoveEngine} from '../features/pdf/engine/engines/pdfRemoveEngine';
 import {pdfSplitEngine} from '../features/pdf/engine/engines/pdfSplitEngine';
+import {
+  verifyPdfPageIntegrity,
+  verifySavedPdfOutput,
+} from '../features/pdf/engine/engines/sharedPdfUtils';
 import {pdfProcessingService} from '../features/pdf/services/PdfProcessingService';
 import {
   chunkPagesBySize,
@@ -83,7 +89,12 @@ import {
   validateSelectedFiles,
 } from '../services/file/fileValidation';
 import {LocaleProvider} from '../services/localization/i18nService';
-import {generateSitemapEntries} from '../services/seo/seoService';
+import {
+  buildCanonicalUrl,
+  buildHreflangAlternates,
+  generateSitemapEntries,
+  resolveBaseOrigin,
+} from '../services/seo/seoService';
 
 const BANNED_CLAIMS = [
   'million',
@@ -96,6 +107,7 @@ const BANNED_CLAIMS = [
   'encrypted',
   'deleted after',
   'no data stored',
+  'no data collected',
   'unlimited',
   'strictly',
   'never uploaded',
@@ -481,7 +493,7 @@ async function run() {
       <ResultPanel result={encryptedInspect} onDiscard={() => {}} />
     </LocaleProvider>
   );
-  assert.ok(encryptedResultMarkup.includes('Password protected'));
+  assert.ok(encryptedResultMarkup.includes('Protected or restricted'));
   assert.equal(encryptedResultMarkup.includes('GarbledEncrypted'), false);
 
   // Public engines MUST reject encrypted PDFs with ENCRYPTED_PDF
@@ -758,6 +770,299 @@ async function run() {
     (err: {code?: string}) => err?.code === 'CORRUPT_PDF'
   );
 
+  // 11i. FIX 1: Corrupt / Truncated PDF Integrity Verification Suite (real bytes, no mocks)
+  // Valid PDF with useObjectStreams: false
+  const noObjStreamDoc = await PDFDocument.create();
+  const noObjStreamFont = await noObjStreamDoc.embedFont(StandardFonts.Helvetica);
+  for (let p = 1; p <= 10; p += 1) {
+    const page = noObjStreamDoc.addPage([400 + p, 600]);
+    page.drawText(`NoObjStream Page ${p}`, {x: 24, y: 540, size: 12, font: noObjStreamFont});
+  }
+  const noObjStreamBytes = await noObjStreamDoc.save({useObjectStreams: false});
+  const noObjStreamBuffer = noObjStreamBytes.slice().buffer;
+
+  // Classic hand-written minimal valid PDF with classic xref table
+  const classicPdfParts = [
+    '%PDF-1.4\n',
+    '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n',
+    '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n',
+    '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << >> /Contents 4 0 R >> endobj\n',
+    '4 0 obj << /Length 0 >> stream\n\nendstream endobj\n',
+  ];
+  let offset = 0;
+  const offsets: number[] = [];
+  for (let idx = 0; idx < classicPdfParts.length; idx += 1) {
+    if (idx > 0) {
+      offsets.push(offset);
+    }
+    offset += classicPdfParts[idx].length;
+  }
+  const xrefStart = offset;
+  const xrefLines = [
+    'xref\n0 5\n0000000000 65535 f \n',
+    ...offsets.map((off) => `${String(off).padStart(10, '0')} 00000 n \n`),
+    `trailer << /Size 5 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`,
+  ];
+  const classicXrefBytes = new TextEncoder().encode([...classicPdfParts, ...xrefLines].join(''));
+  const classicXrefBuffer = classicXrefBytes.slice().buffer;
+
+  // Blank-page PDF (no /Contents entry — legal PDF page)
+  const blankPageDoc = await PDFDocument.create();
+  blankPageDoc.addPage([300, 400]);
+  blankPageDoc.addPage([300, 400]);
+  const blankPageBuffer = (await blankPageDoc.save()).slice().buffer;
+
+  // Multi-stream /Contents array PDF + indirect /Resources PDFRef -> PDFDict
+  const multiStreamDoc = await PDFDocument.create();
+  const msPage = multiStreamDoc.addPage([350, 500]);
+  const stream1Ref = multiStreamDoc.context.register(
+    multiStreamDoc.context.flateStream('q Q')
+  );
+  const stream2Ref = multiStreamDoc.context.register(
+    multiStreamDoc.context.flateStream('q Q')
+  );
+  const resourcesRef = multiStreamDoc.context.register(
+    multiStreamDoc.context.obj({})
+  );
+  msPage.node.set(
+    PDFName.of('Contents'),
+    multiStreamDoc.context.obj([stream1Ref, stream2Ref])
+  );
+  msPage.node.set(PDFName.of('Resources'), resourcesRef);
+  const multiStreamBuffer = (await multiStreamDoc.save({useObjectStreams: false})).slice().buffer;
+
+  for (const [fixtureName, buf] of [
+    ['default object-stream PDF', validPdf3],
+    ['useObjectStreams:false PDF', noObjStreamBuffer],
+    ['classic xref PDF', classicXrefBuffer],
+    ['blank-page PDF', blankPageBuffer],
+    ['multi-stream /Contents array PDF', multiStreamBuffer],
+  ] as const) {
+    const inspectOk = await pdfInspectEngine.run(
+      [{name: `${fixtureName}.pdf`, mimeType: 'application/pdf', size: buf.byteLength, bytes: buf.slice(0)}],
+      {mode: 'inspect'},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.ok(
+      typeof inspectOk.stats.pageCount === 'number' && inspectOk.stats.pageCount >= 1,
+      `${fixtureName} inspect failed`
+    );
+
+    const mergeOk = await pdfMergeEngine.run(
+      [
+        {name: `${fixtureName}-1.pdf`, mimeType: 'application/pdf', size: buf.byteLength, bytes: buf.slice(0)},
+        {name: `${fixtureName}-2.pdf`, mimeType: 'application/pdf', size: validPdf1.byteLength, bytes: validPdf1.slice(0)},
+      ],
+      {},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.equal(mergeOk.outputs.length, 1);
+
+    const splitOk = await pdfSplitEngine.run(
+      [{name: `${fixtureName}.pdf`, mimeType: 'application/pdf', size: buf.byteLength, bytes: buf.slice(0)}],
+      {mode: 'ranges', rangesText: '1'},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.equal(splitOk.outputs.length, 1);
+
+    const extractOk = await pdfExtractEngine.run(
+      [{name: `${fixtureName}.pdf`, mimeType: 'application/pdf', size: buf.byteLength, bytes: buf.slice(0)}],
+      {rangesText: '1'},
+      {onProgress: () => {}, signal: new AbortController().signal}
+    );
+    assert.equal(extractOk.outputs.length, 1);
+
+    if ((inspectOk.stats.pageCount ?? 0) >= 2) {
+      const removeOk = await pdfRemoveEngine.run(
+        [{name: `${fixtureName}.pdf`, mimeType: 'application/pdf', size: buf.byteLength, bytes: buf.slice(0)}],
+        {rangesText: '1'},
+        {onProgress: () => {}, signal: new AbortController().signal}
+      );
+      assert.equal(removeOk.outputs.length, 1);
+    }
+  }
+
+  // Dangling /Contents ref, non-stream /Contents, and dangling /Resources ref rejected as CORRUPT_PDF
+  {
+    const docDanglingContents = await PDFDocument.create();
+    const p1 = docDanglingContents.addPage([300, 400]);
+    p1.node.set(PDFName.of('Contents'), PDFRef.of(999999, 0));
+    const danglingBytes = await docDanglingContents.save({useObjectStreams: false});
+    await assert.rejects(
+      () =>
+        pdfExtractEngine.run(
+          [{name: 'dangling-contents.pdf', mimeType: 'application/pdf', size: danglingBytes.byteLength, bytes: danglingBytes.slice().buffer}],
+          {rangesText: '1'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'CORRUPT_PDF'
+    );
+
+    const docNonStreamContents = await PDFDocument.create();
+    const p2 = docNonStreamContents.addPage([300, 400]);
+    p2.node.set(PDFName.of('Contents'), PDFNumber.of(42));
+    const nonStreamBytes = await docNonStreamContents.save({useObjectStreams: false});
+    await assert.rejects(
+      () =>
+        pdfInspectEngine.run(
+          [{name: 'non-stream.pdf', mimeType: 'application/pdf', size: nonStreamBytes.byteLength, bytes: nonStreamBytes.slice().buffer}],
+          {mode: 'inspect'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'CORRUPT_PDF'
+    );
+
+    const docDanglingRes = await PDFDocument.create();
+    const p3 = docDanglingRes.addPage([300, 400]);
+    p3.node.set(PDFName.of('Resources'), PDFRef.of(888888, 0));
+    const danglingResBytes = await docDanglingRes.save({useObjectStreams: false});
+    await assert.rejects(
+      () =>
+        pdfInspectEngine.run(
+          [{name: 'dangling-res.pdf', mimeType: 'application/pdf', size: danglingResBytes.byteLength, bytes: danglingResBytes.slice().buffer}],
+          {mode: 'inspect'},
+          {onProgress: () => {}, signal: new AbortController().signal}
+        ),
+      (err: {code?: string}) => err?.code === 'CORRUPT_PDF'
+    );
+  }
+
+  // 10-page PDFs (both default & useObjectStreams:false) truncated at 30%, 60%, 90%, 99% + middle-chunk corrupt
+  const tenPageDefaultDoc = await PDFDocument.create();
+  const tenPageFont = await tenPageDefaultDoc.embedFont(StandardFonts.Helvetica);
+  for (let p = 1; p <= 10; p += 1) {
+    const pg = tenPageDefaultDoc.addPage([500, 700]);
+    pg.drawText(`Default 10-page document page ${p}`, {x: 32, y: 640, size: 14, font: tenPageFont});
+  }
+  const tenPageDefaultBytes = await tenPageDefaultDoc.save();
+
+  for (const [variantLabel, sourceBytes] of [
+    ['default-obj-streams', tenPageDefaultBytes],
+    ['no-obj-streams', noObjStreamBytes],
+  ] as const) {
+    const middleCorruptBytes = sourceBytes.slice();
+    const midStart = Math.floor(middleCorruptBytes.byteLength * 0.4);
+    const midEnd = Math.floor(middleCorruptBytes.byteLength * 0.6);
+    for (let idx = midStart; idx < midEnd; idx += 1) {
+      middleCorruptBytes[idx] = (idx * 73 + 19) & 0xff;
+    }
+
+    const corruptionCases: Array<{label: string; bytes: Uint8Array}> = [
+      ...[0.3, 0.6, 0.9, 0.99].map((ratio) => ({
+        label: `trunc-${Math.round(ratio * 100)}%`,
+        bytes: sourceBytes.slice(0, Math.floor(sourceBytes.byteLength * ratio)),
+      })),
+      {label: 'middle-corrupt', bytes: middleCorruptBytes},
+    ];
+
+    for (const c of corruptionCases) {
+      const buf = c.bytes.slice().buffer;
+      const inputFile = {
+        name: `${variantLabel}-${c.label}.pdf`,
+        mimeType: 'application/pdf',
+        size: buf.byteLength,
+        bytes: buf,
+      };
+      const engineChecks: Array<[string, () => Promise<unknown>]> = [
+        ['inspect', () => pdfInspectEngine.run([inputFile], {mode: 'inspect'}, {onProgress: () => {}, signal: new AbortController().signal})],
+        [
+          'merge',
+          () =>
+            pdfMergeEngine.run(
+              [
+                inputFile,
+                {name: 'valid.pdf', mimeType: 'application/pdf', size: validPdf1.byteLength, bytes: validPdf1.slice(0)},
+              ],
+              {},
+              {onProgress: () => {}, signal: new AbortController().signal}
+            ),
+        ],
+        ['split', () => pdfSplitEngine.run([inputFile], {mode: 'every-page'}, {onProgress: () => {}, signal: new AbortController().signal})],
+        ['extract', () => pdfExtractEngine.run([inputFile], {rangesText: '1'}, {onProgress: () => {}, signal: new AbortController().signal})],
+        ['remove', () => pdfRemoveEngine.run([inputFile], {rangesText: '1'}, {onProgress: () => {}, signal: new AbortController().signal})],
+      ];
+
+      for (const [engineLabel, runFn] of engineChecks) {
+        await assert.rejects(
+          runFn,
+          (err: {code?: string}) => err?.code === 'CORRUPT_PDF',
+          `${variantLabel} ${c.label} must be rejected as CORRUPT_PDF by ${engineLabel}`
+        );
+      }
+    }
+  }
+
+  // Output re-verification failure when saved bytes are truncated
+  await assert.rejects(
+    () =>
+      verifySavedPdfOutput(
+        tenPageDefaultBytes.slice(0, Math.floor(tenPageDefaultBytes.byteLength * 0.9)),
+        10,
+        'Truncated saved check',
+        new AbortController().signal
+      ),
+    (err: {code?: string}) => err?.code === 'CORRUPT_PDF'
+  );
+
+  // 10,000-page integrity check speed (O(pages))
+  {
+    const doc10k = await PDFDocument.create();
+    for (let i = 0; i < 10000; i += 1) {
+      doc10k.addPage([200, 200]);
+    }
+    const t0 = performance.now();
+    verifyPdfPageIntegrity(doc10k, new AbortController().signal, '10k-blank.pdf');
+    const integrityMs = performance.now() - t0;
+    assert.ok(integrityMs < 1500, `10k page integrity check took ${integrityMs.toFixed(1)}ms`);
+  }
+
+  // 11j. FIX 9: Heavy multi-thousand-page PDF merge cancellation & integrity checkpoint cancel
+  {
+    const heavyDoc = await PDFDocument.create();
+    const heavyFont = await heavyDoc.embedFont(StandardFonts.Helvetica);
+    for (let i = 0; i < 2000; i += 1) {
+      const pg = heavyDoc.addPage([400, 600]);
+      pg.drawText(`Heavy page ${i + 1}`, {x: 24, y: 550, size: 10, font: heavyFont});
+    }
+    const heavyBytes = await heavyDoc.save({useObjectStreams: true});
+    assert.ok(
+      heavyBytes.byteLength < PROCESSING_LIMITS.maxFileSizeBytes,
+      `Generated 2000-page PDF (${heavyBytes.byteLength} bytes) must stay below 25 MB limit`
+    );
+
+    const heavyAbort = new AbortController();
+    let abortedAtPercent = -1;
+    await assert.rejects(
+      () =>
+        pdfMergeEngine.run(
+          [
+            {name: 'heavy-a.pdf', mimeType: 'application/pdf', size: heavyBytes.byteLength, bytes: heavyBytes.slice().buffer},
+            {name: 'heavy-b.pdf', mimeType: 'application/pdf', size: heavyBytes.byteLength, bytes: heavyBytes.slice().buffer},
+          ],
+          {},
+          {
+            onProgress: (p) => {
+              if (p.percent >= 10 && !heavyAbort.signal.aborted) {
+                abortedAtPercent = p.percent;
+                heavyAbort.abort();
+              }
+            },
+            signal: heavyAbort.signal,
+          }
+        ),
+      (err: {code?: string}) => err?.code === 'CANCELLED'
+    );
+    assert.ok(abortedAtPercent >= 10 && abortedAtPercent < 100);
+
+    // AbortSignal checkpoint during integrity check on pre-aborted signal
+    const preAborted = new AbortController();
+    preAborted.abort();
+    assert.throws(
+      () => verifyPdfPageIntegrity(heavyDoc, preAborted.signal, 'heavy-cancel-check.pdf'),
+      (err: {code?: string}) => err?.code === 'CANCELLED'
+    );
+  }
+
   // Honest legacy facade check for planned ops
   const plannedPdfResult = await pdfProcessingService.processFiles(
     [new File(['%PDF-1.4'], 'report.pdf', {type: 'application/pdf'})],
@@ -969,7 +1274,93 @@ async function run() {
   assert.equal(validation.acceptedFiles.length, 1);
   assert.equal(validation.errors[0].code, 'INVALID_EXTENSION');
 
-  console.log('All Milestone 5A unit, real-PDF engine, ZIP, limit & SSR render checks passed.');
+  // 16. FIX 4: SSR structural check for >= 44px touch-target utility classes
+  const touchTargetHtml = renderToStaticMarkup(
+    <LocaleProvider>
+      <MemoryRouter>
+        <Header />
+        <Breadcrumbs items={[{label: 'Home', to: '/'}, {label: 'All PDF Tools', to: '/tools'}]} />
+        <Switch checked={false} onCheckedChange={() => {}} label="Every page" />
+        <Footer />
+      </MemoryRouter>
+    </LocaleProvider>
+  );
+  assert.ok(touchTargetHtml.includes('min-h-[44px]'));
+  assert.ok(touchTargetHtml.includes('min-w-[44px]'));
+
+  // 17. FIX 7: VITE_SITE_URL origin resolution & trailing-slash normalization
+  {
+    const devWarnings: string[] = [];
+    assert.equal(
+      resolveBaseOrigin({
+        envSiteUrl: 'https://YOUR-PROJECT.vercel.app///',
+        isDev: true,
+        windowOrigin: 'http://localhost:3000',
+        onWarn: (msg) => devWarnings.push(msg),
+      }),
+      'https://your-project.vercel.app'
+    );
+    assert.equal(devWarnings.length, 0);
+
+    assert.equal(
+      buildCanonicalUrl('/merge-pdf/', {
+        envSiteUrl: 'https://YOUR-PROJECT.vercel.app/',
+        isDev: false,
+      }),
+      'https://your-project.vercel.app/merge-pdf'
+    );
+
+    const customAlternates = buildHreflangAlternates('/split-pdf/', {
+      envSiteUrl: 'https://YOUR-PROJECT.vercel.app/',
+      isDev: false,
+    });
+    assert.ok(
+      customAlternates.some((alt) => alt.href === 'https://your-project.vercel.app/split-pdf')
+    );
+
+    const customSitemap = generateSitemapEntries({
+      envSiteUrl: 'https://YOUR-PROJECT.vercel.app/',
+      isDev: false,
+    });
+    assert.ok(
+      customSitemap.some((entry) => entry.loc === 'https://your-project.vercel.app/merge-pdf')
+    );
+
+    // Unset in dev warns and uses windowOrigin
+    const unsetDevOrigin = resolveBaseOrigin({
+      envSiteUrl: '',
+      isDev: true,
+      windowOrigin: 'http://localhost:3000',
+      onWarn: (msg) => devWarnings.push(msg),
+    });
+    assert.equal(unsetDevOrigin, 'http://localhost:3000');
+    assert.equal(devWarnings.length, 1);
+
+    // Unset in non-dev does NOT warn
+    const prodWarnings: string[] = [];
+    const unsetProdOrigin = resolveBaseOrigin({
+      envSiteUrl: '',
+      isDev: false,
+      windowOrigin: 'https://YOUR-PROJECT.vercel.app/',
+      onWarn: (msg) => prodWarnings.push(msg),
+    });
+    assert.equal(unsetProdOrigin, 'https://your-project.vercel.app');
+    assert.equal(prodWarnings.length, 0);
+
+    // SSR fallback with no env and no windowOrigin returns empty origin (relative path)
+    assert.equal(
+      buildCanonicalUrl('/merge-pdf/', {
+        envSiteUrl: '',
+        isDev: false,
+        windowOrigin: '',
+      }),
+      '/merge-pdf'
+    );
+  }
+
+  console.log(
+    'All Milestone 5A unit, real-PDF engine, integrity/truncation, ZIP, limit, SEO origin, cancel & SSR render checks passed.'
+  );
 }
 
 run();

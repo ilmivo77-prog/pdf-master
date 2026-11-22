@@ -17,7 +17,7 @@ export function Footer() {
           <div className="space-y-3">
             <Link
               to={buildPath(STATIC_ROUTES.home)}
-              className="inline-flex items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center px-1 -ms-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
             >
               <PdfMasterLogo size="md" />
             </Link>
@@ -30,12 +30,12 @@ export function Footer() {
             <h2 className="text-sm font-semibold text-slate-900">
               {t.footer.toolsHeading}
             </h2>
-            <ul className="mt-4 space-y-2.5 text-sm">
+            <ul className="mt-2 space-y-0 text-sm">
               {featuredTools.map((tool) => (
                 <li key={tool.id}>
                   <Link
                     to={buildPath(tool.route)}
-                    className="text-slate-600 transition-colors hover:text-slate-900"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 text-slate-600 transition-colors hover:text-slate-900"
                   >
                     {tool.name}
                   </Link>
@@ -44,7 +44,7 @@ export function Footer() {
               <li>
                 <Link
                   to={buildPath(STATIC_ROUTES.tools)}
-                  className="font-medium text-blue-700 transition-colors hover:text-blue-800"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 font-medium text-blue-700 transition-colors hover:text-blue-800"
                 >
                   {t.footer.allToolsLink}
                 </Link>
@@ -56,11 +56,11 @@ export function Footer() {
             <h2 className="text-sm font-semibold text-slate-900">
               {t.footer.companyHeading}
             </h2>
-            <ul className="mt-4 space-y-2.5 text-sm">
+            <ul className="mt-2 space-y-0 text-sm">
               <li>
                 <Link
                   to={buildPath(STATIC_ROUTES.home)}
-                  className="text-slate-600 transition-colors hover:text-slate-900"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 text-slate-600 transition-colors hover:text-slate-900"
                 >
                   {t.nav.home}
                 </Link>
@@ -68,7 +68,7 @@ export function Footer() {
               <li>
                 <Link
                   to={buildPath(STATIC_ROUTES.about)}
-                  className="text-slate-600 transition-colors hover:text-slate-900"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 text-slate-600 transition-colors hover:text-slate-900"
                 >
                   {t.footer.aboutLink}
                 </Link>
@@ -76,7 +76,7 @@ export function Footer() {
               <li>
                 <Link
                   to={buildPath(STATIC_ROUTES.contact)}
-                  className="text-slate-600 transition-colors hover:text-slate-900"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 text-slate-600 transition-colors hover:text-slate-900"
                 >
                   {t.footer.contactLink}
                 </Link>
@@ -88,11 +88,11 @@ export function Footer() {
             <h2 className="text-sm font-semibold text-slate-900">
               {t.footer.legalHeading}
             </h2>
-            <ul className="mt-4 space-y-2.5 text-sm">
+            <ul className="mt-2 space-y-0 text-sm">
               <li>
                 <Link
                   to={buildPath(STATIC_ROUTES.privacyPolicy)}
-                  className="text-slate-600 transition-colors hover:text-slate-900"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 text-slate-600 transition-colors hover:text-slate-900"
                 >
                   {t.footer.privacyLink}
                 </Link>
@@ -100,7 +100,7 @@ export function Footer() {
               <li>
                 <Link
                   to={buildPath(STATIC_ROUTES.terms)}
-                  className="text-slate-600 transition-colors hover:text-slate-900"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md py-1 text-slate-600 transition-colors hover:text-slate-900"
                 >
                   {t.footer.termsLink}
                 </Link>

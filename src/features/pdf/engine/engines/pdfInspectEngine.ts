@@ -9,15 +9,15 @@ import type {
   PdfInspectionMetadata,
   ProcessingResult,
 } from '../types';
+import {
+  checkPdfTailHeuristic,
+  throwIfAborted,
+  verifyPdfPageIntegrity,
+  verifySavedPdfOutput,
+} from './sharedPdfUtils';
 
 export interface PdfInspectOptions {
   mode?: 'inspect' | 'roundtrip';
-}
-
-function throwIfAborted(signal: AbortSignal): void {
-  if (signal.aborted) {
-    throw createProcessingError('CANCELLED', 'Aborted via AbortSignal.');
-  }
 }
 
 function readCleanMetadata(doc: PDFDocument): PdfInspectionMetadata {
@@ -82,6 +82,7 @@ export const pdfInspectEngine: PdfEngine = {
       );
     }
 
+    checkPdfTailHeuristic(bytes, file.name);
     throwIfAborted(ctx.signal);
 
     ctx.onProgress({
@@ -112,7 +113,7 @@ export const pdfInspectEngine: PdfEngine = {
             updateMetadata: false,
           });
           warnings.push(
-            'This PDF is password-protected; inspection details are read-only and roundtrip re-saving is disabled.'
+            'This PDF uses encryption or permission restrictions; inspection details are read-only and roundtrip re-saving is disabled.'
           );
         } catch (encryptedFallbackErr) {
           throw mapPdfLibError(encryptedFallbackErr);
@@ -128,13 +129,14 @@ export const pdfInspectEngine: PdfEngine = {
       mode: 'determinate',
       percent: 75,
       stageLabel:
-        mode === 'roundtrip' ? 'Re-saving PDF document' : 'Reading PDF metadata',
+        mode === 'roundtrip' ? 'Re-saving PDF document' : 'Verifying page integrity',
     });
 
     let pageCount: number;
     let metadata: PdfInspectionMetadata = {};
     try {
       pageCount = pdfDoc.getPageCount();
+      verifyPdfPageIntegrity(pdfDoc, ctx.signal, file.name);
       if (!isEncrypted) {
         metadata = readCleanMetadata(pdfDoc);
       }
@@ -172,7 +174,7 @@ export const pdfInspectEngine: PdfEngine = {
       throw mapPdfLibError(err);
     }
 
-    throwIfAborted(ctx.signal);
+    await verifySavedPdfOutput(savedBytes, pageCount, 'Roundtrip PDF', ctx.signal);
 
     ctx.onProgress({
       mode: 'determinate',
