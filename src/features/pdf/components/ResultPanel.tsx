@@ -1,4 +1,4 @@
-import {Download, FileText, Trash2} from 'lucide-react';
+import {Archive, Download, FileText, Trash2} from 'lucide-react';
 import {Alert, Button, Card} from '../../../components/ui';
 import {triggerOutputDownload} from '../../../services/file/downloadManager';
 import {formatBytes} from '../../../services/file/fileValidation';
@@ -9,6 +9,7 @@ export interface ResultPanelProps {
   result: ProcessingResult;
   onDiscard: () => void;
   onDownload?: (output: OutputFile) => void;
+  discardLabel?: string;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export function ResultPanel({
   result,
   onDiscard,
   onDownload,
+  discardLabel,
   className,
 }: ResultPanelProps) {
   const {t} = useTranslation();
@@ -27,6 +29,9 @@ export function ResultPanel({
       triggerOutputDownload(output);
     }
   };
+
+  const showMetadata = !result.stats.isEncrypted;
+  const archive = result.archive;
 
   return (
     <Card padding="md" className={className}>
@@ -42,14 +47,27 @@ export function ResultPanel({
             </p>
           </div>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            onClick={onDiscard}
-          >
-            {t.processing.discardResultsButton}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {archive && (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Archive className="h-4 w-4" aria-hidden="true" />}
+                onClick={() => handleDownload(archive)}
+              >
+                {t.processing.downloadAllZipButton}
+              </Button>
+            )}
+
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+              onClick={onDiscard}
+            >
+              {discardLabel ?? t.processing.discardResultsButton}
+            </Button>
+          </div>
         </div>
 
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -60,6 +78,17 @@ export function ResultPanel({
               </dt>
               <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-slate-900">
                 {result.stats.pageCount}
+              </dd>
+            </div>
+          )}
+
+          {result.outputs.length > 0 && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+              <dt className="text-xs text-slate-500">
+                {t.processing.outputCountLabel}
+              </dt>
+              <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-slate-900">
+                {result.outputs.length}
               </dd>
             </div>
           )}
@@ -77,7 +106,7 @@ export function ResultPanel({
             </div>
           )}
 
-          {result.stats.metadata?.title && (
+          {showMetadata && result.stats.metadata?.title && (
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
               <dt className="text-xs text-slate-500">
                 {t.processing.metadataTitleLabel}
@@ -88,7 +117,7 @@ export function ResultPanel({
             </div>
           )}
 
-          {result.stats.metadata?.producer && (
+          {showMetadata && result.stats.metadata?.producer && (
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
               <dt className="text-xs text-slate-500">
                 {t.processing.metadataProducerLabel}
@@ -99,6 +128,12 @@ export function ResultPanel({
             </div>
           )}
         </dl>
+
+        {result.stats.interactiveFeaturesDetected && (
+          <Alert variant="warning" title={t.processing.warningsHeading}>
+            <p>{t.processing.interactiveFeaturesNote}</p>
+          </Alert>
+        )}
 
         {result.warnings.length > 0 && (
           <Alert variant="warning" title={t.processing.warningsHeading}>
@@ -137,7 +172,7 @@ export function ResultPanel({
                   </div>
 
                   <Button
-                    variant="primary"
+                    variant={archive ? 'secondary' : 'primary'}
                     size="sm"
                     leftIcon={<Download className="h-4 w-4" aria-hidden="true" />}
                     onClick={() => handleDownload(output)}

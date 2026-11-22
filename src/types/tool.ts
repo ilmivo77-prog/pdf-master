@@ -27,7 +27,9 @@ export type ToolIconName =
   | 'sparkles'
   | 'scan-text'
   | 'edit'
-  | 'shield';
+  | 'shield'
+  | 'extract'
+  | 'remove';
 
 export interface ToolCategoryDefinition {
   id: ToolCategoryId;

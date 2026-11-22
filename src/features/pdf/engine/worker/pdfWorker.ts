@@ -1,7 +1,11 @@
 /// <reference lib="webworker" />
 
 import {EngineRegistry} from '../engineRegistry';
+import {pdfExtractEngine} from '../engines/pdfExtractEngine';
 import {pdfInspectEngine} from '../engines/pdfInspectEngine';
+import {pdfMergeEngine} from '../engines/pdfMergeEngine';
+import {pdfRemoveEngine} from '../engines/pdfRemoveEngine';
+import {pdfSplitEngine} from '../engines/pdfSplitEngine';
 import {createProcessingError, isOutOfMemoryError} from '../errorTaxonomy';
 import type {ProcessingError, ProcessingProgress} from '../types';
 import type {WorkerRequestMessage, WorkerResponseMessage} from './protocol';
@@ -10,6 +14,10 @@ const PROGRESS_THROTTLE_MS = 100; // ~10 updates/sec max
 
 const workerEngineRegistry = new EngineRegistry();
 workerEngineRegistry.registerEngine(pdfInspectEngine);
+workerEngineRegistry.registerEngine(pdfMergeEngine);
+workerEngineRegistry.registerEngine(pdfSplitEngine);
+workerEngineRegistry.registerEngine(pdfExtractEngine);
+workerEngineRegistry.registerEngine(pdfRemoveEngine);
 
 const activeControllers = new Map<string, AbortController>();
 
@@ -113,6 +121,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequestMessage>) => {
       ) {
         transferSet.add(output.bytes.buffer);
       }
+    }
+    if (
+      result.archive &&
+      result.archive.bytes.buffer instanceof ArrayBuffer &&
+      result.archive.bytes.byteOffset === 0 &&
+      result.archive.bytes.byteLength === result.archive.bytes.buffer.byteLength
+    ) {
+      transferSet.add(result.archive.bytes.buffer);
     }
 
     postWorkerMessage(

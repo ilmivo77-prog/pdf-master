@@ -132,10 +132,12 @@ export const pdfInspectEngine: PdfEngine = {
     });
 
     let pageCount: number;
-    let metadata: PdfInspectionMetadata;
+    let metadata: PdfInspectionMetadata = {};
     try {
       pageCount = pdfDoc.getPageCount();
-      metadata = readCleanMetadata(pdfDoc);
+      if (!isEncrypted) {
+        metadata = readCleanMetadata(pdfDoc);
+      }
     } catch (err) {
       throw mapPdfLibError(err);
     }

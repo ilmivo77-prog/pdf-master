@@ -2,7 +2,10 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
+import {fileURLToPath} from 'url';
 import {defineConfig} from 'vite';
+
+const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({command}) => {
   if (command === 'build' && process.env.NODE_ENV !== 'production') {
@@ -23,8 +26,8 @@ export default defineConfig(({command}) => {
           if (error) {
             return;
           }
-          const distDir = path.resolve(__dirname, 'dist');
-          const srcAssets = path.resolve(__dirname, 'src/assets');
+          const distDir = path.resolve(ROOT_DIR, 'dist');
+          const srcAssets = path.resolve(ROOT_DIR, 'src/assets');
           const distAssets = path.resolve(distDir, 'src/assets');
           if (fs.existsSync(distDir) && fs.existsSync(srcAssets)) {
             fs.cpSync(srcAssets, distAssets, {recursive: true, force: true});
@@ -32,9 +35,12 @@ export default defineConfig(({command}) => {
         },
       },
     ],
+    worker: {
+      format: 'es',
+    },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(ROOT_DIR, '.'),
       },
     },
     server: {

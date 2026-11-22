@@ -276,7 +276,11 @@ export function HomePage() {
                     to={buildPath(tool.route)}
                     className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800"
                   >
-                    <span>{t.home.openToolCta}</span>
+                    <span>
+                      {tool.status === 'available'
+                        ? t.home.useToolCta
+                        : t.home.openToolCta}
+                    </span>
                     <ArrowRight
                       className="h-4 w-4 rtl:rotate-180"
                       aria-hidden="true"

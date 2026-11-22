@@ -14,7 +14,7 @@ export function AboutPage() {
     <>
       <SeoHead
         title={`${t.pages.aboutTitle} – ${SITE_CONFIG.brandName}`}
-        description="Learn about PDF Master, a free-first online PDF utility platform built for clear document workflows, accessibility, and privacy-conscious architecture."
+        description="Learn about PDF Master, a free-first online PDF utility platform built for clear document workflows, accessibility, and browser-based processing."
         canonicalPath={STATIC_ROUTES.about}
       />
 
@@ -31,7 +31,7 @@ export function AboutPage() {
               Platform Principles
             </h2>
             <p className="mt-3 text-base leading-relaxed text-slate-600">
-              Document utilities should be fast to understand, accessible on any screen size, and honest about what happens to your files. PDF Master separates tool discovery, file validation, and processing engines so each capability can be tested and documented clearly as it is introduced.
+              Document utilities should be clear to understand, accessible on any screen size, and honest about what happens to your files. PDF Master separates tool discovery, file validation, and processing engines so each capability can be tested and documented clearly as it is introduced.
             </p>
           </div>
 
@@ -41,12 +41,12 @@ export function AboutPage() {
                 Free-First Architecture
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                Prioritizes open-source tooling and browser-side execution wherever practical before introducing server-side workers for heavy conversions.
+                Prioritizes open-source tooling and browser-side Web Worker execution wherever practical before introducing server-side workers for heavy conversions.
               </p>
             </Card>
             <Card padding="md">
               <h3 className="text-base font-semibold text-slate-900">
-                Global & Multilingual Ready
+                Global &amp; Multilingual Ready
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 Built initially in English with centralized translation dictionaries, localized routing patterns, and layout support for future RTL languages.
@@ -56,10 +56,10 @@ export function AboutPage() {
 
           <Card padding="md">
             <h2 className="text-lg font-semibold text-slate-900">
-              Current Stage: Discovery &amp; Foundation
+              Current Stage: Browser PDF Organization Release
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              The platform currently provides tool discovery and search, dedicated tool landing pages, client-side file validation, and the UI design system. No files are uploaded or processed in this release; processing engines for individual PDF operations will follow in upcoming milestones.
+              Four browser-based PDF organization tools—Merge PDF, Split PDF, Extract Pages, and Remove Pages—now run inside a local Web Worker without sending files to any server. Additional optimization, conversion, editing, and OCR tools remain marked Coming soon while their engines are developed.
             </p>
             <div className="mt-5">
               <Link

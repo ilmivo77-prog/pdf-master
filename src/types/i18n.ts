@@ -81,6 +81,7 @@ export interface TranslationDictionary {
     featuredToolsTitle: string;
     featuredToolsSubtitle: string;
     openToolCta: string;
+    useToolCta: string;
     whySectionTitle: string;
     whySectionSubtitle: string;
     whyBenefits: {
@@ -140,10 +141,13 @@ export interface TranslationDictionary {
     executionTargetLabel: string;
     relatedToolsTitle: string;
     backToDirectory: string;
+    livePrivacyNotice: string;
   };
   fileManager: {
     dropzoneTitle: string;
     dropzoneSubtitle: string;
+    liveDropzoneTitle: string;
+    liveDropzoneSubtitle: string;
     selectFilesButton: string;
     addMoreButton: string;
     clearAllButton: string;
@@ -154,6 +158,73 @@ export interface TranslationDictionary {
     selectedFilesHeading: string;
     validationSuccessText: string;
     processUnavailableNotice: string;
+  };
+  workspace: {
+    queueHeading: string;
+    inspectingLabel: string;
+    inspectErrorFallback: string;
+    pagesUnitSingular: string;
+    pagesUnitPlural: string;
+    totalPagesLabel: string;
+    moveUpLabel: string;
+    moveDownLabel: string;
+    memoryNotice: string;
+    merge: {
+      heading: string;
+      helperText: string;
+      minFilesWarning: string;
+      runButton: string;
+    };
+    split: {
+      heading: string;
+      modeLabel: string;
+      modeRangesLabel: string;
+      modeRangesDesc: string;
+      modeEveryNLabel: string;
+      modeEveryNDesc: string;
+      modeEveryPageLabel: string;
+      modeEveryPageDesc: string;
+      rangesInputLabel: string;
+      rangesPlaceholder: string;
+      rangesExamples: string;
+      everyNInputLabel: string;
+      everyNInvalid: string;
+      summaryOneOutput: string;
+      summaryManyPrefix: string;
+      summaryManySuffix: string;
+      tooManyOutputsPrefix: string;
+      tooManyOutputsSuffix: string;
+      runButton: string;
+    };
+    extract: {
+      heading: string;
+      rangesInputLabel: string;
+      rangesPlaceholder: string;
+      rangesExamples: string;
+      summaryPrefix: string;
+      summarySuffix: string;
+      runButton: string;
+    };
+    remove: {
+      heading: string;
+      rangesInputLabel: string;
+      rangesPlaceholder: string;
+      rangesExamples: string;
+      summaryPrefix: string;
+      summaryMiddle: string;
+      summarySuffix: string;
+      removeAllError: string;
+      runButton: string;
+    };
+    pageRangeErrors: {
+      EMPTY_INPUT: string;
+      INPUT_TOO_LONG: string;
+      INVALID_PAGE_COUNT: string;
+      INVALID_SYNTAX: string;
+      ZERO_OR_NEGATIVE_PAGE: string;
+      REVERSED_RANGE: string;
+      PAGE_OUT_OF_RANGE: string;
+    };
   };
   processing: {
     statusLabels: {
@@ -170,8 +241,11 @@ export interface TranslationDictionary {
     elapsedLabel: string;
     stageDefaultLabel: string;
     downloadButton: string;
+    downloadAllZipButton: string;
     discardResultsButton: string;
+    startOverButton: string;
     outputsHeading: string;
+    outputCountLabel: string;
     warningsHeading: string;
     statsHeading: string;
     pagesLabel: string;
@@ -181,6 +255,7 @@ export interface TranslationDictionary {
     metadataTitleLabel: string;
     metadataProducerLabel: string;
     noOutputsNotice: string;
+    interactiveFeaturesNote: string;
   };
   processingErrors: {
     invalidFile: string;
@@ -189,6 +264,9 @@ export interface TranslationDictionary {
     corruptPdf: string;
     fileTooLarge: string;
     tooManyFiles: string;
+    tooManyOutputs: string;
+    noPagesRemaining: string;
+    invalidOptions: string;
     outOfMemory: string;
     workerCrashed: string;
     cancelled: string;

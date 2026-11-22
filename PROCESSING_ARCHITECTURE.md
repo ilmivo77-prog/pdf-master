@@ -1,11 +1,13 @@
-# PDF Master — Processing Architecture (Milestone 4)
+# PDF Master — Processing Architecture (Milestone 5A)
 
-This document describes the browser-first PDF processing infrastructure introduced in Milestone 4.
+This document describes the browser-first PDF processing infrastructure introduced in Milestone 4 and expanded with real client-side tools in Milestone 5A.
 
 ## 1. Architecture Summary
-- **Execution Model**: All PDF parsing and manipulation runs inside a dedicated module Web Worker (`src/features/pdf/engine/worker/pdfWorker.ts`) so the React main thread remains responsive.
-- **Lazy Loading**: Both the `PdfWorkerClient` worker instance and `pdf-lib` are excluded from the initial application bundle. The worker is spawned only when a job begins.
-- **Public Tool Status**: All user-facing PDF tools remain `status: 'planned'` ("Coming soon") in Milestone 4. Only internal self-test operations (`internal:pdf-inspect`, `internal:pdf-roundtrip`) exist on the dev-only `/dev/pipeline` harness.
+- **Execution Model**: All PDF parsing, inspection, page copying, and ZIP packaging run inside a dedicated ES module Web Worker (`src/features/pdf/engine/worker/pdfWorker.ts`) so the React main thread remains responsive.
+- **Lazy Loading**: `PdfWorkerClient`, `pdf-lib`, and `jszip` are excluded from the initial application bundle. `ToolWorkspace` is lazy-loaded only on available tool routes, `pdfWorker` is spawned only when inspecting/processing files, and `jszip` is dynamically imported inside the worker only when a multi-output split runs.
+- **Public Tool Status (Milestone 5A)**:
+  - **Available (`status: 'available'`)**: `merge-pdf` (`pdf-merge`), `split-pdf` (`pdf-split`), `extract-pages` (`pdf-extract`), `remove-pages` (`pdf-remove`).
+  - **Planned (`status: 'planned'`)**: All remaining tools (`compress-pdf`, `pdf-to-word`, `word-to-pdf`, `jpg-to-pdf`, `pdf-to-jpg`, `rotate-pdf`, `protect-pdf`, `unlock-pdf`) remain in validation preview.
 
 ## 2. Job Status State Machine
 
@@ -30,30 +32,33 @@ This document describes the browser-first PDF processing infrastructure introduc
 
 ### Worker → Main Thread
 - `{ type: 'progress', jobId, progress }` — Throttled to at most ~10 updates/second (`100ms`), preserving `0%` and `100%` boundaries.
-- `{ type: 'result', jobId, result }` — Transfers output `Uint8Array` backing `ArrayBuffer`s back to the main thread.
+- `{ type: 'result', jobId, result }` — Transfers output PDF `Uint8Array` buffers (and optional `archive` ZIP buffer) back to the main thread.
 - `{ type: 'error', jobId, error }` — Structured `ProcessingError` (`code`, `messageKey`, optional `developerDetail` never shown raw to users).
 
-### Concurrency, Timeouts & Crash Recovery
-- `PdfWorkerClient` executes one active job per worker at a time and queues additional jobs sequentially.
-- A per-job watchdog (`PROCESSING_LIMITS.jobTimeoutMs`, default `60_000` ms) terminates stalled workers and fails the job cleanly.
-- On `AbortSignal` abort, `onerror`, or `messageerror`, active listeners and timers are cleared, `worker.terminate()` is invoked, and the next job lazily spawns a fresh worker.
+### Cancellation, Memory Cleanup & Assertions
+- **Page-Granularity Cancellation**: `copyPagesInChunks()` copies up to 15 pages per batch and checks `AbortSignal` before and after each batch.
+- **Inter-File Reference Release**: `pdf-merge` and `pdf-split` release `PDFDocument` references between files/outputs before starting the next item or packaging a ZIP.
+- **Expected Page Count Assertion**: Every engine asserts `outputDoc.getPageCount() === expectedCount` before returning output bytes.
 
 ## 4. Conservative Limits (`src/config/processingLimits.ts`)
 Defaults chosen conservatively for mobile browser Web Worker memory budgets (**to be validated by real-device testing**):
 - `maxFileSizeBytes`: `25 MB` per file
 - `maxTotalSizeBytes`: `50 MB` total job payload
 - `maxFilesCount`: `10` files per batch
+- `maxSplitOutputs`: `50` output PDFs per split run (capped because each split PDF allocates independent object/font structures and output byte arrays before ZIP assembly)
 - `jobTimeoutMs`: `60_000` ms per job
-- `devTestMaxFileSizeBytes`: `50 MB` ceiling for `/dev/pipeline` testing
+- `devTestMaxFileSizeBytes`: `50 MB` ceiling for `/dev/pipeline` testing only (real tools use `PROCESSING_LIMITS`)
 
-## 5. Temporary File & ObjectURL Lifecycle (`src/services/file/downloadManager.ts`)
-1. **Selection**: Selecting a file keeps only the browser `File` handle and sanitized metadata (`SafeFileMetadata`); file bytes are **not** read at selection time.
-2. **Header Check**: Before reading full bytes, `sniffFileSignature()` reads only the first `16` bytes (`file.slice(0, 16)`) to verify magic headers (`%PDF-x.y`, JPEG, PNG).
-3. **Processing**: `file.arrayBuffer()` is read lazily right before worker dispatch and transferred to the worker.
-4. **Outputs & Downloads**: Output `Uint8Array` bytes reside strictly in browser session memory. `triggerOutputDownload()` creates a `Blob` and tracked ObjectURL, triggers download using a sanitized filename (`buildOutputFileName`), and revokes the URL via `URL.revokeObjectURL`.
-5. **Explicit Cleanup**: Clicking **Discard results** (or unmounting the component/hook) aborts any active job, terminates any active worker, drops result references, and calls `revokeAllTrackedObjectUrls()`.
+## 5. Known PDF Structure Limitations (`pdf-lib`)
+- **Password-Protected PDFs**: Public tools reject password-protected PDFs with `ENCRYPTED_PDF` (`ignoreEncryption` is never used for tool processing). `pdf-inspect` reports only `"Password protected: Yes"` without reading encrypted metadata strings.
+- **Interactive & Structural Features**: `pdf-lib` page copying (`copyPages`) transfers page content streams and resources cleanly, but may not preserve form fields (`AcroForm`), bookmarks/outlines (`Outlines`), tagged structure (`StructTreeRoot`), or certain annotations/links (`Annots`). Engines detect these structures and surface a visible plain-language notice in `ResultPanel`.
 
-## 6. What Is NOT Implemented in Milestone 4
-- Real user-facing PDF tools (merge, split, compress, convert, rotate, protect, unlock, OCR, AI).
-- Multi-worker parallelism or server-side processing workers.
-- Persistent storage, user accounts, or backend upload endpoints.
+## 6. Temporary File & ObjectURL Lifecycle (`src/services/file/downloadManager.ts`)
+1. **Selection & Inspection**: Selecting files stores `File` handles and sanitized metadata; magic bytes (`sniffFileSignature`) check only the leading 16 bytes, and page counts are inspected sequentially in the worker.
+2. **Outputs & Downloads**: Generated PDF/ZIP `Uint8Array` bytes stay strictly in browser session memory. `triggerOutputDownload()` revokes created ObjectURLs automatically after download.
+3. **Explicit Cleanup**: Clicking **Start over** / **Discard results** (or unmounting the workspace) aborts active jobs, terminates active workers, clears state, and calls `revokeAllTrackedObjectUrls()`.
+
+## 7. What Is Deferred Beyond Milestone 5A
+- Page thumbnail previews, `pdfjs-dist`, Organize PDF visual grid (Milestone 5B).
+- Compression, image/office conversions, rotation, encryption/unlocking, OCR, and AI tools.
+- Server-side processing endpoints, user accounts, or analytics.

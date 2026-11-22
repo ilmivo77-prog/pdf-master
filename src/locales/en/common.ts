@@ -20,7 +20,7 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     closeMenu: 'Close navigation menu',
   },
   search: {
-    placeholder: 'Search PDF tools (e.g., merge, compress, Word, JPG)...',
+    placeholder: 'Search PDF tools (e.g., merge, split, extract, remove)...',
     ariaLabel: 'Search PDF tools',
     noResultsTitle: 'No tools found',
     noResultsDescription:
@@ -29,15 +29,15 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     resultsHint: 'Use Up and Down arrows to navigate results, Enter to open.',
   },
   home: {
-    heroEyebrow: 'PDF Master · Planned Utility Platform',
+    heroEyebrow: 'PDF Master · Browser PDF Utilities',
     heroHeadline: 'All Your PDF Tools. One Simple Platform.',
     heroSubheadline:
-      'Merge, split, compress, convert, rotate, and manage PDF files in one focused directory. Individual processing engines are being built milestone by milestone.',
+      'Merge, split, extract, and remove PDF pages directly inside your browser, with conversion, optimization, and editing utilities rolling out milestone by milestone.',
     heroPrimaryCta: 'Browse all tools',
     heroSecondaryCta: 'How it works',
     popularToolsTitle: 'Popular PDF Tools',
     popularToolsSubtitle:
-      'Core document workflows prioritized in our initial catalog. Each tool currently provides its dedicated route and local file validation preview.',
+      'Core document workflows prioritized in our catalog, starting with browser-based PDF organization tools.',
     viewAllToolsLink: 'View all tools',
     categoriesSectionTitle: 'Explore by Category',
     categoriesSectionSubtitle:
@@ -46,8 +46,9 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     categoryToolPlural: 'tools',
     featuredToolsTitle: 'Featured Workflows',
     featuredToolsSubtitle:
-      'Highlighted tools from our first wave of planned document utilities.',
+      'Highlighted PDF tools across our active browser utilities and upcoming milestones.',
     openToolCta: 'Preview tool page',
+    useToolCta: 'Open tool',
     whySectionTitle: 'Why PDF Master',
     whySectionSubtitle:
       'Architectural principles guiding the platform from the first foundation milestone onward.',
@@ -63,10 +64,9 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
           'Responsive layouts from 320px to 1440px, 44px touch targets, and accessible keyboard navigation across menus and dialogs.',
       },
       {
-        title: 'Browser-First Roadmap',
+        title: 'Browser-First Architecture',
         description:
-          'We plan to process files directly in your browser using open-source tooling wherever practical before adding server workers for heavier tasks.',
-        tag: 'Roadmap',
+          'Available organization tools execute inside a browser Web Worker using open-source tooling so document bytes stay in your browser session.',
       },
       {
         title: 'Multilingual & RTL Ready',
@@ -89,48 +89,48 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
         stepNumber: '02',
         title: 'Add your file',
         description:
-          'Select or drag documents into the dropzone. Local checks verify file extensions, MIME types, and size boundaries immediately.',
+          'Select or drag documents into the dropzone. Local checks verify signatures, formats, and browser memory limits immediately.',
       },
       {
         stepNumber: '03',
         title: 'Download the result',
         description:
-          'Retrieve your output file cleanly once the processing engine for that tool is enabled in an upcoming milestone.',
+          'Run the browser worker on available tools and download your PDF or ZIP outputs directly from session memory.',
       },
     ],
     howItWorksDisclaimer:
-      'Rollout notice: All tools are currently marked Coming soon while PDF processing engines are rolled out tool by tool in upcoming milestones.',
+      'Availability note: Merge PDF, Split PDF, Extract Pages, and Remove Pages run today inside your browser. Tools marked Coming soon remain in local file-validation preview.',
     roadmapStripTitle: 'Current Platform Catalog',
     roadmapPlannedLabel: 'tools planned',
     roadmapLiveLabel: 'live',
     roadmapCategoriesLabel: 'categories',
     faqSectionTitle: 'Frequently Asked Questions',
     faqSectionSubtitle:
-      'Clear answers about the current stage of PDF Master and upcoming releases.',
+      'Clear answers about the current stage of PDF Master, active tools, and browser memory limits.',
     faqItems: [
       {
         id: 'free',
         question: 'Is PDF Master free to use?',
         answer:
-          'PDF Master is designed with a free-first approach using open-source-friendly tooling wherever practical. Exact usage limits for future browser and server tools will be documented alongside each tool launch.',
+          'PDF Master is designed with a free-first approach using open-source browser libraries wherever practical. Active browser tools have conservative file size limits to protect device memory.',
       },
       {
         id: 'file-types',
-        question: 'What file types are planned?',
+        question: 'What file types are supported?',
         answer:
-          'PDF Master is planned around PDF files plus common office document and image formats, with exact accepted formats shown on each tool page.',
+          'Current live tools accept standard PDF (.pdf) documents. Additional tools for office documents and image formats are planned with exact accepted formats shown on each tool page.',
       },
       {
         id: 'availability',
-        question: 'When will the PDF tools be available to process files?',
+        question: 'Which PDF tools can process files right now?',
         answer:
-          'Tools are currently in the Coming soon stage while the processing pipeline and individual PDF engines are implemented milestone by milestone.',
+          'Merge PDF, Split PDF, Extract Pages, and Remove Pages are live inside your browser. Remaining tools stay marked Coming soon while their engines are built milestone by milestone.',
       },
       {
         id: 'file-handling',
         question: 'How are my files handled right now?',
         answer:
-          'PDF processing is not yet implemented. In the current release, files are only validated locally in your browser and are not uploaded. Full data-handling details will be published before processing launches.',
+          'For the four available tools, files are processed inside your browser by the page’s own code and are not sent to a server by PDF Master. Results exist only in browser memory for your current session. Planned tools only run local validation checks.',
       },
       {
         id: 'languages',
@@ -139,30 +139,30 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
           'English is active right now. The localization architecture and RTL layout rules are in place to support future languages.',
       },
     ],
-    finalCtaTitle: 'Explore the Planned Tool Catalog',
+    finalCtaTitle: 'Explore the PDF Tool Catalog',
     finalCtaDescription:
-      'Browse registered tool pages, test local file validation rules, or search by task across every category.',
+      'Use the live browser organization tools or inspect upcoming utilities across every document category.',
     finalCtaButton: 'Browse all tools',
   },
   toolsDirectory: {
     pageTitle: 'All PDF Tools',
     pageSubtitle:
-      'Browse the centralized PDF Master tool catalog. Search by task, filter by category, or check release availability.',
-    searchPlaceholder: 'Search PDF tools (e.g., merge, compress, Word, JPG)...',
+      'Browse the centralized PDF Master tool catalog. Search by task, filter by category, or view only live browser tools.',
+    searchPlaceholder: 'Search PDF tools (e.g., merge, split, extract, remove)...',
     searchLabel: 'Search PDF tools',
     allCategoriesFilter: 'All Categories',
     availableOnlyLabel: 'Show only available tools',
     availableOnlyDescription:
-      'Hide Coming soon tools and list only tools with live processing engines.',
+      'Hide Coming soon tools and list only tools with active browser processing.',
     invalidCategoryNotice:
       'The requested category parameter was not recognized, so all categories are shown.',
     showingCountLabel: 'tools matching current filter',
     emptyStateTitle: 'No matching tools found',
     emptyStateDescription:
       'Try adjusting your search keywords or resetting the active category filter.',
-    emptyAvailableTitle: 'No tools are live yet',
+    emptyAvailableTitle: 'No matching available tools',
     emptyAvailableDescription:
-      'All registered tools are currently in Coming soon status while processing engines are rolled out in upcoming milestones.',
+      'No available tools matched your current search or category filter. Clear filters to view all tools.',
     clearFiltersCta: 'Reset Filters',
     statusPlanned: 'Coming soon',
     statusAvailable: 'Available',
@@ -173,16 +173,21 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     breadcrumbTools: 'All PDF Tools',
     foundationNoticeTitle: 'Coming soon — Tool Foundation Preview',
     foundationNoticeBody:
-      'This dedicated landing page and local file validation workflow are active. The underlying PDF processing engine for this operation will be integrated in an upcoming milestone—no files are uploaded or processed yet.',
+      'This dedicated landing page and local file validation workflow are active. The underlying PDF processing engine for this operation will be integrated in an upcoming milestone.',
     supportedInputsLabel: 'Accepted Inputs',
     supportedOutputsLabel: 'Target Outputs',
-    executionTargetLabel: 'Planned Execution',
+    executionTargetLabel: 'Processing Mode',
     relatedToolsTitle: 'Related PDF Tools',
     backToDirectory: 'View All PDF Tools',
+    livePrivacyNotice:
+      'Files are processed inside your browser by the page’s own code and are not sent to a server by PDF Master. Results exist only in browser memory for this session.',
   },
   fileManager: {
     dropzoneTitle: 'Select or drag files here to validate',
     dropzoneSubtitle: 'Files stay in your browser session for local format and size verification.',
+    liveDropzoneTitle: 'Select or drag PDF files here',
+    liveDropzoneSubtitle:
+      'Processed inside your browser Web Worker. Files are not sent to a server and stay in session memory only.',
     selectFilesButton: 'Select Files',
     addMoreButton: 'Add More Files',
     clearAllButton: 'Clear Queue',
@@ -193,7 +198,83 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     selectedFilesHeading: 'Validated File Queue',
     validationSuccessText: 'Validated locally (ready for future engine)',
     processUnavailableNotice:
-      'Processing execution is not enabled yet. Your files passed local validation and were not uploaded anywhere.',
+      'Processing execution is not enabled yet for this planned tool. Your files passed local validation and were not sent to any server.',
+  },
+  workspace: {
+    queueHeading: 'Selected PDF Files',
+    inspectingLabel: 'Reading pages...',
+    inspectErrorFallback: 'Could not read PDF structure.',
+    pagesUnitSingular: 'page',
+    pagesUnitPlural: 'pages',
+    totalPagesLabel: 'Total pages',
+    moveUpLabel: 'Move up',
+    moveDownLabel: 'Move down',
+    memoryNotice:
+      'Browser memory limits are conservative and large documents may fail on low-memory phones.',
+    merge: {
+      heading: '1. Order PDF Files to Merge',
+      helperText:
+        'Files will be combined from top to bottom. Use Move up or Move down to arrange the final page order.',
+      minFilesWarning: 'Select at least 2 valid, non-password-protected PDF files to merge.',
+      runButton: 'Merge PDFs',
+    },
+    split: {
+      heading: '1. Choose Split Method',
+      modeLabel: 'Split mode',
+      modeRangesLabel: 'Custom page ranges',
+      modeRangesDesc:
+        'Create one output PDF per comma-separated range group (e.g., "1-3, 5, 8-10").',
+      modeEveryNLabel: 'Every N pages',
+      modeEveryNDesc:
+        'Divide the document into consecutive chunks of a fixed page count.',
+      modeEveryPageLabel: 'Every page separately',
+      modeEveryPageDesc:
+        'Save every single page as its own individual PDF inside a ZIP archive.',
+      rangesInputLabel: 'Page ranges',
+      rangesPlaceholder: 'e.g., 1-3, 5, 8-10',
+      rangesExamples: 'Examples: "1-3, 5" creates 2 PDFs; "1-2, 3-4, 5" creates 3 PDFs.',
+      everyNInputLabel: 'Pages per split PDF',
+      everyNInvalid: 'Enter a whole number greater than or equal to 1.',
+      summaryOneOutput: 'This configuration will produce 1 PDF file (direct download).',
+      summaryManyPrefix: 'This configuration will produce',
+      summaryManySuffix: 'PDF files packaged into a ZIP archive.',
+      tooManyOutputsPrefix: 'Too many output files requested. Reduce groups or raise pages per split so output count is at most',
+      tooManyOutputsSuffix: '.',
+      runButton: 'Split PDF',
+    },
+    extract: {
+      heading: '1. Select Pages to Extract',
+      rangesInputLabel: 'Pages to extract (order preserved)',
+      rangesPlaceholder: 'e.g., 1-3, 5, 8-10',
+      rangesExamples:
+        'Duplicate pages are omitted automatically while keeping the first position you wrote (e.g., "5, 1-3").',
+      summaryPrefix: 'Will extract',
+      summarySuffix: 'into a new PDF in the order listed.',
+      runButton: 'Extract Pages',
+    },
+    remove: {
+      heading: '1. Select Pages to Remove',
+      rangesInputLabel: 'Pages to delete from the document',
+      rangesPlaceholder: 'e.g., 2, 4-6',
+      rangesExamples:
+        'All other pages will remain in their original order. You must keep at least 1 page.',
+      summaryPrefix: 'Will remove',
+      summaryMiddle: 'and keep',
+      summarySuffix: 'in the output PDF.',
+      removeAllError:
+        'Removing all pages would leave an empty PDF. Deselect at least one page to keep.',
+      runButton: 'Remove Pages',
+    },
+    pageRangeErrors: {
+      EMPTY_INPUT: 'Enter one or more page numbers or ranges (for example: 1-3, 5).',
+      INPUT_TOO_LONG: 'The page range input is too long. Shorten the range expression.',
+      INVALID_PAGE_COUNT: 'Document page count is not available yet.',
+      INVALID_SYNTAX:
+        'Use ASCII numbers, hyphens, and commas only (for example: 1-3, 5, 8-10).',
+      ZERO_OR_NEGATIVE_PAGE: 'Page numbers start at 1. Numbers below 1 are not allowed.',
+      REVERSED_RANGE: 'Each range start must be less than or equal to its end (e.g., 2-5, not 5-2).',
+      PAGE_OUT_OF_RANGE: 'One or more page numbers exceed the document page count.',
+    },
   },
   processing: {
     statusLabels: {
@@ -210,8 +291,11 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     elapsedLabel: 'Elapsed',
     stageDefaultLabel: 'Working on document',
     downloadButton: 'Download',
+    downloadAllZipButton: 'Download all as ZIP',
     discardResultsButton: 'Discard results',
+    startOverButton: 'Start over',
     outputsHeading: 'Generated Files',
+    outputCountLabel: 'Output files',
     warningsHeading: 'Notices',
     statsHeading: 'Document Summary',
     pagesLabel: 'Pages',
@@ -221,6 +305,8 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
     metadataTitleLabel: 'Title',
     metadataProducerLabel: 'Producer',
     noOutputsNotice: 'No output files were produced for this inspection run.',
+    interactiveFeaturesNote:
+      'Some interactive features such as bookmarks or form fields may not be preserved.',
   },
   processingErrors: {
     invalidFile:
@@ -235,6 +321,12 @@ export const EN_COMMON_DICTIONARY: TranslationDictionary = {
       'The selected file or batch exceeds the browser memory limit for this operation.',
     tooManyFiles:
       'Too many files were selected for this operation. Please reduce the queue size.',
+    tooManyOutputs:
+      'This split would create more output files than the browser memory cap allows. Increase pages per split or select fewer groups.',
+    noPagesRemaining:
+      'Removing all pages would leave an empty PDF. Keep at least one page.',
+    invalidOptions:
+      'Please review your page selection or tool options and try again.',
     outOfMemory:
       'Your browser ran low on memory while handling this file. Close other tabs or try a smaller PDF.',
     workerCrashed:

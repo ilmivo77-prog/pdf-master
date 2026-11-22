@@ -14,6 +14,9 @@ export type ProcessingErrorCode =
   | 'CORRUPT_PDF'
   | 'FILE_TOO_LARGE'
   | 'TOO_MANY_FILES'
+  | 'TOO_MANY_OUTPUTS'
+  | 'NO_PAGES_REMAINING'
+  | 'INVALID_OPTIONS'
   | 'OUT_OF_MEMORY'
   | 'WORKER_CRASHED'
   | 'CANCELLED'
@@ -28,6 +31,9 @@ export type ProcessingErrorMessageKey =
   | 'corruptPdf'
   | 'fileTooLarge'
   | 'tooManyFiles'
+  | 'tooManyOutputs'
+  | 'noPagesRemaining'
+  | 'invalidOptions'
   | 'outOfMemory'
   | 'workerCrashed'
   | 'cancelled'
@@ -67,10 +73,13 @@ export interface ProcessingStats {
   pageCount?: number;
   isEncrypted?: boolean;
   metadata?: PdfInspectionMetadata;
+  interactiveFeaturesDetected?: boolean;
 }
 
 export interface ProcessingResult {
   outputs: OutputFile[];
+  /** Optional ZIP archive produced when an operation creates multiple PDF outputs. */
+  archive?: OutputFile;
   warnings: string[];
   stats: ProcessingStats;
 }

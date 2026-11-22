@@ -2,6 +2,8 @@ import {
   Combine,
   FileCheck2,
   FileImage,
+  FileMinus2,
+  FileOutput,
   FileSpreadsheet,
   FileText,
   Image,
@@ -28,6 +30,10 @@ export function ToolIcon({name, className = 'h-5 w-5'}: ToolIconProps) {
       return <Combine className={className} aria-hidden="true" />;
     case 'split':
       return <Scissors className={className} aria-hidden="true" />;
+    case 'extract':
+      return <FileOutput className={className} aria-hidden="true" />;
+    case 'remove':
+      return <FileMinus2 className={className} aria-hidden="true" />;
     case 'compress':
       return <Minimize2 className={className} aria-hidden="true" />;
     case 'file-text':

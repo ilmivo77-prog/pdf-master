@@ -13,16 +13,21 @@ export function buildOutputFileName(
   const sanitized = sanitizeFileName(originalName);
   const lastDot = sanitized.lastIndexOf('.');
   const rawBase = lastDot > 0 ? sanitized.slice(0, lastDot) : sanitized;
-  const cleanSuffix = suffix.replace(/[^a-zA-Z0-9_-]/g, '') || 'processed';
+  const cleanSuffix =
+    suffix === '' ? '' : suffix.replace(/[^a-zA-Z0-9_-]/g, '') || 'processed';
   const normalizedExt = targetExtension.startsWith('.')
     ? targetExtension.toLowerCase()
     : `.${targetExtension.toLowerCase()}`;
 
-  const reservedLength = cleanSuffix.length + 1 + normalizedExt.length;
+  const reservedLength =
+    (cleanSuffix ? cleanSuffix.length + 1 : 0) + normalizedExt.length;
   const maxBaseLength = Math.max(8, MAX_OUTPUT_FILENAME_LENGTH - reservedLength);
-  const trimmedBase = (rawBase || 'document').slice(0, maxBaseLength).trim() || 'document';
+  const trimmedBase =
+    (rawBase || 'document').slice(0, maxBaseLength).trim() || 'document';
 
-  return `${trimmedBase}-${cleanSuffix}${normalizedExt}`;
+  return cleanSuffix
+    ? `${trimmedBase}-${cleanSuffix}${normalizedExt}`
+    : `${trimmedBase}${normalizedExt}`;
 }
 
 export function createTrackedObjectUrl(blob: Blob): string {

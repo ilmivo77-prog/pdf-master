@@ -11,13 +11,13 @@ export function PrivacyPage() {
     <>
       <SeoHead
         title={`${t.pages.privacyTitle} – ${SITE_CONFIG.brandName}`}
-        description="Read the PDF Master Privacy Policy describing current browser-only file validation and our commitment to minimal data handling."
+        description="Read the PDF Master Privacy Policy describing browser-based file processing for live tools, local validation, and session-memory data handling."
         canonicalPath={STATIC_ROUTES.privacyPolicy}
       />
 
       <PageHero
         title={t.pages.privacyTitle}
-        eyebrow="Effective for Current Foundation Release"
+        eyebrow="Effective for Current Release"
         containerSize="narrow"
       />
 
@@ -25,19 +25,19 @@ export function PrivacyPage() {
         <div className="space-y-8 text-base leading-relaxed text-slate-600">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              1. Local File Handling
+              1. Local File Processing &amp; Validation
             </h2>
             <p className="mt-2">
-              In the current release, files are only validated locally in your browser and are not uploaded. Extension, MIME type, and size checks run in browser memory, and no file contents are sent to remote servers or stored in databases.
+              For the four available tools (Merge PDF, Split PDF, Extract Pages, and Remove Pages), files are processed inside your browser by the page’s own code and are not sent to a server by {SITE_CONFIG.brandName}. All input bytes and generated results exist only in browser memory for your current session and are cleared when you discard results, close the tab, or reload the page. Tools still marked Coming soon only run local format and size validation in your browser.
             </p>
           </div>
 
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              2. Personal Data Collection
+              2. Personal Data &amp; Analytics
             </h2>
             <p className="mt-2">
-              In the current release, {SITE_CONFIG.brandName} has no user accounts, login forms, or backend database storage, and sets no tracking cookies or advertising scripts.
+              In the current release, {SITE_CONFIG.brandName} has no user accounts, login forms, backend database storage, third-party analytics scripts, or tracking cookies. Fonts are self-hosted with the application bundle rather than fetched from external font servers.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export function PrivacyPage() {
               3. Future Processing Architecture
             </h2>
             <p className="mt-2">
-              PDF processing is not implemented in the current release. Future browser-based tools are planned to process files on your device, and if any future tool requires server-side processing (such as complex document conversions or OCR), updated data-handling and retention details will be published before that tool is enabled.
+              Future browser-based tools will continue running on your device wherever practical. If any future tool (such as complex document conversions or OCR) requires server-side processing, updated data-handling and retention disclosures will be published before that tool is enabled.
             </p>
           </div>
 

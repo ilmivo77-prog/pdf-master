@@ -1,6 +1,7 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
 import {STATIC_ROUTES} from '../../config/site';
+import type {ToolRichContent} from '../../config/toolPageContent';
 import {useTranslation} from '../../services/localization/i18nService';
 import type {PdfToolDefinition, ToolCategoryDefinition} from '../../types/tool';
 import {ToolIcon} from '../../features/pdf/components/ToolIcon';
@@ -10,6 +11,7 @@ import {
   Alert,
   Badge,
   Breadcrumbs,
+  Card,
   Container,
   type AccordionItem,
 } from '../ui';
@@ -20,6 +22,7 @@ export interface ToolPageLayoutProps {
   executionLabel: string;
   relatedTools: PdfToolDefinition[];
   faqItems?: AccordionItem[];
+  richContent?: ToolRichContent | null;
   workspace: React.ReactNode;
 }
 
@@ -29,6 +32,7 @@ export function ToolPageLayout({
   executionLabel,
   relatedTools,
   faqItems = [],
+  richContent = null,
   workspace,
 }: ToolPageLayoutProps) {
   const {t, buildPath} = useTranslation();
@@ -128,6 +132,78 @@ export function ToolPageLayout({
         </Container>
       </section>
 
+      {richContent && (
+        <section className="border-t border-slate-200 bg-white py-12 sm:py-14">
+          <Container size="standard" className="space-y-10">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                About {tool.name}
+              </h2>
+              <p className="mt-2.5 text-base leading-relaxed text-slate-600">
+                {richContent.overview}
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                How to use {tool.name}
+              </h2>
+              <ol className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {richContent.steps.map((step, index) => (
+                  <li key={step.title}>
+                    <Card padding="md" className="h-full bg-slate-50/70">
+                      <p className="font-mono text-xs font-semibold tabular-nums text-blue-700">
+                        {String(index + 1).padStart(2, '0')}
+                      </p>
+                      <h3 className="mt-1.5 text-base font-semibold text-slate-900">
+                        {step.title}
+                      </h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                        {step.description}
+                      </p>
+                    </Card>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Card padding="md">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Accepted Inputs &amp; Options
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {richContent.acceptedInputsSummary}
+                </p>
+                <dl className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  {richContent.optionsExplained.map((opt) => (
+                    <div key={opt.name}>
+                      <dt className="text-sm font-semibold text-slate-800">
+                        {opt.name}
+                      </dt>
+                      <dd className="mt-0.5 text-sm leading-relaxed text-slate-600">
+                        {opt.detail}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </Card>
+
+              <Card padding="md">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Browser Limits &amp; Known Limitations
+                </h2>
+                <ul className="mt-3 list-disc space-y-2 ps-5 text-sm leading-relaxed text-slate-600">
+                  {richContent.limitations.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </Card>
+            </div>
+          </Container>
+        </section>
+      )}
+
       {faqItems.length > 0 && (
         <section className="border-t border-slate-200 bg-white py-12 sm:py-14">
           <Container size="standard">
@@ -135,7 +211,9 @@ export function ToolPageLayout({
               Frequently Asked Questions
             </h2>
             <p className="mt-1.5 text-sm text-slate-600">
-              Planned capabilities and current file validation behavior for {tool.name}.
+              {isPlanned
+                ? `Planned capabilities and current file validation behavior for ${tool.name}.`
+                : `Supported options, browser memory limits, and file handling for ${tool.name}.`}
             </p>
             <div className="mt-6">
               <Accordion items={faqItems} />

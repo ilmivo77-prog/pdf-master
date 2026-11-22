@@ -22,6 +22,9 @@ interface FileDropzoneProps {
   validationRule: FileValidationRule;
   disabled?: boolean;
   initialErrors?: FileValidationError[];
+  controlledFiles?: ManagedFileItem[];
+  hideQueue?: boolean;
+  isLiveTool?: boolean;
   onFilesChange?: (files: ManagedFileItem[]) => void;
 }
 
@@ -30,15 +33,20 @@ export function FileDropzone({
   validationRule,
   disabled = false,
   initialErrors = [],
+  controlledFiles,
+  hideQueue = false,
+  isLiveTool = false,
   onFilesChange,
 }: FileDropzoneProps) {
   const {t} = useTranslation();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [files, setFiles] = useState<ManagedFileItem[]>([]);
+  const [internalFiles, setInternalFiles] = useState<ManagedFileItem[]>([]);
   const [errors, setErrors] = useState<FileValidationError[]>(initialErrors);
   const [isDragging, setIsDragging] = useState(false);
+
+  const files = controlledFiles ?? internalFiles;
 
   const visualState: DropzoneVisualState = disabled
     ? 'disabled'
@@ -55,17 +63,27 @@ export function FileDropzone({
     ...validationRule.allowedMimeTypes,
   ].join(',');
 
+  const updateFiles = (nextFiles: ManagedFileItem[]) => {
+    if (controlledFiles === undefined) {
+      setInternalFiles(nextFiles);
+    }
+    onFilesChange?.(nextFiles);
+  };
+
   const handleIncomingFiles = (incoming: FileList | null) => {
     if (disabled || !incoming || incoming.length === 0) {
       return;
     }
 
-    const result = validateSelectedFiles(incoming, validationRule, files);
-    const updatedFiles = [...files, ...result.acceptedFiles];
+    // For single-file live tools, replace the current selection seamlessly when user picks a new file
+    const baseFiles =
+      !validationRule.allowMultiple && isLiveTool ? [] : files;
 
-    setFiles(updatedFiles);
+    const result = validateSelectedFiles(incoming, validationRule, baseFiles);
+    const updatedFiles = [...baseFiles, ...result.acceptedFiles];
+
     setErrors(result.errors);
-    onFilesChange?.(updatedFiles);
+    updateFiles(updatedFiles);
   };
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,15 +116,13 @@ export function FileDropzone({
 
   const handleRemoveFile = (fileId: string) => {
     const updated = files.filter((item) => item.id !== fileId);
-    setFiles(updated);
     setErrors([]);
-    onFilesChange?.(updated);
+    updateFiles(updated);
   };
 
   const handleClearAll = () => {
-    setFiles([]);
     setErrors([]);
-    onFilesChange?.([]);
+    updateFiles([]);
   };
 
   const openFilePicker = () => {
@@ -114,6 +130,13 @@ export function FileDropzone({
       fileInputRef.current?.click();
     }
   };
+
+  const headingText = isLiveTool
+    ? t.fileManager.liveDropzoneTitle
+    : t.fileManager.dropzoneTitle;
+  const subtitleText = isLiveTool
+    ? t.fileManager.liveDropzoneSubtitle
+    : t.fileManager.dropzoneSubtitle;
 
   return (
     <div className="space-y-4" data-dropzone-state={visualState}>
@@ -162,10 +185,10 @@ export function FileDropzone({
         </div>
 
         <h2 className="mt-4 text-lg font-semibold text-slate-900">
-          {t.fileManager.dropzoneTitle}
+          {headingText}
         </h2>
         <p className="mx-auto mt-1.5 max-w-lg text-sm text-slate-600">
-          {t.fileManager.dropzoneSubtitle}
+          {subtitleText}
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -227,7 +250,7 @@ export function FileDropzone({
         </Alert>
       )}
 
-      {files.length > 0 && (
+      {!hideQueue && files.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 sm:px-5">
             <h3 className="text-sm font-semibold text-slate-900">
